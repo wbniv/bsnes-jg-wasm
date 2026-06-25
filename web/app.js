@@ -10,6 +10,12 @@
 (function () {
   "use strict";
 
+  // An embedding page (e.g. the indri.studio inline embed) can point the loader
+  // at assets under a base path and pick the boot ROM; defaults reproduce the
+  // standalone page (relative paths, the zoom demo).
+  var BASE = (window.BJG_BASE || "");
+  var DEFAULT_ROM = (window.BJG_DEFAULT_ROM || "mandel-display");
+
   // SNES controller bits — must match Bsnes::Input::Gamepad in src/bsnes.hpp.
   var JOY = {
     B: 1 << 15, Y: 1 << 14, Select: 1 << 13, Start: 1 << 12,
@@ -48,7 +54,7 @@
     return new Promise(function (resolve, reject) {
       if (window.BsnesJg) return resolve(window.BsnesJg);
       var s = document.createElement("script");
-      s.src = "cores/bsnes_jg.js";
+      s.src = BASE + "cores/bsnes_jg.js";
       s.onload = function () { resolve(window.BsnesJg); };
       s.onerror = function () { reject(new Error("core not built")); };
       document.body.appendChild(s);
@@ -117,7 +123,7 @@
     if (checkEl) { checkEl.textContent = ""; checkEl.className = "badge"; }
     markActive(id);
     status("loading " + id + ".sfc…");
-    return fetch("roms/" + id + ".sfc")
+    return fetch(BASE + "roms/" + id + ".sfc")
       .then(function (r) { if (!r.ok) throw new Error("fetch " + id); return r.arrayBuffer(); })
       .then(function (buf) {
         if (!loadRomBytes(new Uint8Array(buf))) throw new Error("core rejected ROM");
@@ -155,6 +161,7 @@
 
   function updateCheckButton(id) {
     var btn = document.getElementById("verify");
+    if (!btn) return;
     var meta = romMeta(id);
     if (meta && meta.selfcheck) {
       btn.disabled = false;
@@ -175,7 +182,7 @@
 
     stopLoop();
     // re-load this ROM to power on cleanly, like the gate's harness.
-    fetch("roms/" + current + ".sfc")
+    fetch(BASE + "roms/" + current + ".sfc")
       .then(function (r) { return r.arrayBuffer(); })
       .then(function (buf) {
         loadRomBytes(new Uint8Array(buf));
@@ -231,57 +238,78 @@
   }
 
   function showProvenance() {
-    fetch("cores/PROVENANCE.json")
+    fetch(BASE + "cores/PROVENANCE.json")
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (p) {
-        if (!p) return;
+        if (!p || !bannerEl) return;
+        var emver = (String(p.emscripten || "").match(/\d+\.\d+\.\d+/) || ["?"])[0];
         bannerEl.innerHTML =
-          "<b>Accurate mode</b> — running <b>" + p.core + " " + p.version +
-          "</b>, the exact core the differential gate trusts " +
-          "(sha256 <code>" + String(p.sha256).slice(0, 12) + "…</code>, built with " +
-          (p.emscripten || "emscripten") + "). " +
-          "Hit <b>Verify fidelity</b> to reproduce the gate's headless WRAM assert in this tab.";
+          "Running <b>" + p.core + " " + p.version + "</b> — the exact cycle-accurate core " +
+          "the differential gate trusts (sha256 <code>" + String(p.sha256).slice(0, 12) +
+          "…</code>, emscripten " + emver + "). Hit <b>Verify fidelity</b> to reproduce the " +
+          "gate's headless WRAM assert in this tab.";
       })
       .catch(function () {});
   }
 
+  // Pause the run loop when the canvas scrolls out of view (resume on return),
+  // so an embedded demo doesn't burn a CPU core while the reader is elsewhere.
+  function observeVisibility() {
+    var target = document.getElementById("game") || canvas;
+    if (!target || typeof IntersectionObserver === "undefined") return;
+    new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting) {
+        if (Module && Module._bjg_loaded && Module._bjg_loaded()) startLoop();
+      } else {
+        stopLoop();
+      }
+    }, { threshold: 0.05 }).observe(target);
+  }
+
   function init() {
+    // The picker, file input, verify button and drag-drop target are all
+    // optional — an embed may render just the canvas + status. Guard each.
     document.querySelectorAll("#picker button[data-rom]").forEach(function (b) {
       b.addEventListener("click", function () { playUrl(b.dataset.rom); });
     });
-    document.getElementById("file").addEventListener("change", function (e) {
+    var fileEl = document.getElementById("file");
+    if (fileEl) fileEl.addEventListener("change", function (e) {
       if (e.target.files[0]) playFile(e.target.files[0]);
     });
-    document.getElementById("verify").addEventListener("click", verify);
+    var verifyEl = document.getElementById("verify");
+    if (verifyEl) verifyEl.addEventListener("click", verify);
     window.addEventListener("keydown", onKey(true));
     window.addEventListener("keyup", onKey(false));
-    // drag & drop
     var game = document.getElementById("game");
-    ["dragover", "drop"].forEach(function (ev) {
-      game.addEventListener(ev, function (e) { e.preventDefault(); });
-    });
-    game.addEventListener("drop", function (e) {
-      if (e.dataTransfer.files[0]) playFile(e.dataTransfer.files[0]);
-    });
+    if (game) {
+      ["dragover", "drop"].forEach(function (ev) {
+        game.addEventListener(ev, function (e) { e.preventDefault(); });
+      });
+      game.addEventListener("drop", function (e) {
+        if (e.dataTransfer.files[0]) playFile(e.dataTransfer.files[0]);
+      });
+    }
 
     status("loading core…");
     Promise.all([
       loadCoreScript().then(function (factory) { return factory(); }),
-      fetch("roms/manifest.json").then(function (r) { return r.json(); })
+      fetch(BASE + "roms/manifest.json").then(function (r) { return r.json(); })
     ]).then(function (res) {
       Module = res[0];
       window.__bjg = Module;     // exposed for debugging / automated checks
       manifest = res[1];
       showProvenance();
-      var rom = new URLSearchParams(location.search).get("rom") || "mandel-zoom";
+      observeVisibility();
+      var rom = new URLSearchParams(location.search).get("rom") || DEFAULT_ROM;
       playUrl(rom);
     }).catch(function (e) {
       status("");
-      bannerEl.innerHTML =
-        "<b>Core not built yet.</b> Run <code>./build.sh</code> (or <code>task build</code>) to " +
-        "compile <code>web/cores/bsnes_jg.{js,wasm}</code> — the accurate bsnes-jg core — then reload. " +
-        "(" + e.message + ")";
-      bannerEl.className = "banner warn";
+      if (bannerEl) {
+        bannerEl.innerHTML =
+          "<b>Core not built.</b> Run <code>build.sh</code> to compile " +
+          "<code>bsnes_jg.{js,wasm}</code>, then reload. (" + e.message + ")";
+        bannerEl.className = "banner warn";
+      }
     });
   }
 

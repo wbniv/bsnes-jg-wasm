@@ -15,6 +15,11 @@ tasks:
     cmds:
       - ./build.sh
 
+  bundle:
+    desc: "Emit a single-program (mandel-display) bundle into dist-bundle/ for hosting/embedding"
+    cmds:
+      - ./deploy-bundle.sh
+
   serve:
     desc: "Serve web/ at http://localhost:8000 (single-threaded; no special headers)"
     cmds:

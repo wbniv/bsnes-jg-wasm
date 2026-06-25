@@ -14,6 +14,9 @@
 # Deferral-tracking hook state
 /docs/plans/.deferrals-seen
 
+# Deploy bundle (reproducible via deploy-bundle.sh)
+/dist-bundle/
+
 # Misc
 *.log
 .DS_Store

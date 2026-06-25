@@ -13,8 +13,11 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 ### Polish
 
-- [ ] Deploy: static host (Cloudflare Pages per the `cloudflare-static-site` skill); single-thread →
-  no special headers. Publish GPLv3 source alongside. Note: `bsnes_jg.wasm` is ~3.9 MB.
+- [ ] Deploy: first target is **indri.studio** — embed the live emulator (featuring `mandel-display`)
+  at [`/apps/llvm-mos-65816/`](https://indri.studio/apps/llvm-mos-65816/). Needs a `task bundle`
+  here that emits a single-program, relative-path `dist-bundle/`; integration + hosting land in
+  indri. Plan: `../indri.studio/docs/plans/2026-06-25-llvm-mos-emulator-embed.md`. (Single-thread →
+  no special headers; `bsnes_jg.wasm` is ~3.9 MB.)
 - [ ] Optional: trim Asyncify cost (size/speed) with an `ASYNCIFY_ONLY`/`ADD` list once the core's
   swap-reachable call set is profiled — only if mobile perf needs it.
 - [ ] Wire self-checks for the other demos (zoom/mode7/interactive) — needs their scripted-input
