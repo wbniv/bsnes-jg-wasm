@@ -13,11 +13,6 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 ### Polish
 
-- [ ] Deploy: first target is **indri.studio** — embed the live emulator (featuring `mandel-display`)
-  at [`/apps/llvm-mos-65816/`](https://indri.studio/apps/llvm-mos-65816/). Needs a `task bundle`
-  here that emits a single-program, relative-path `dist-bundle/`; integration + hosting land in
-  indri. Plan: `../indri.studio/docs/plans/2026-06-25-llvm-mos-emulator-embed.md`. (Single-thread →
-  no special headers; `bsnes_jg.wasm` is ~3.9 MB.)
 - [ ] Optional: trim Asyncify cost (size/speed) with an `ASYNCIFY_ONLY`/`ADD` list once the core's
   swap-reachable call set is profiled — only if mobile perf needs it.
 - [ ] Wire self-checks for the other demos (zoom/mode7/interactive) — needs their scripted-input
@@ -30,6 +25,10 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 ## Done
 
+- [x] **Deployed to indri.studio** (2026-06-25): the live emulator is embedded inline on
+  [`/apps/llvm-mos-65816/`](https://indri.studio/apps/llvm-mos-65816/) running `mandel-display` + the
+  `0x9103` self-check; `task bundle` → `dist-bundle/`, synced into indri's `public/`. Prod CSP block
+  found+fixed (`'wasm-unsafe-eval'`); verified live (`v0.1.69`). [indri plan](../indri.studio/docs/plans/2026-06-25-llvm-mos-emulator-embed.md)
 - [x] **Accurate mode wired + verified** (2026-06-25): built jgemu/bsnes 2.1.0 (sha256-pinned, the
   gate core) to wasm via a custom Jolly-Good-API frontend + Emscripten-fiber libco backend + Asyncify;
   canvas loader; in-browser self-check reads WRAM `0x9103` == gate. Verification 1–5 + perf PASS.
