@@ -1,0 +1,36 @@
+version: '3'
+
+# bsnes-jg-wasm — build the gate's cycle-accurate SNES core to WebAssembly and
+# serve a page that runs the +mos-a16 homebrew demos.
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  build:
+    desc: "Bootstrap emsdk + build the bsnes-jg WASM core into web/cores/"
+    cmds:
+      - ./build.sh
+
+  serve:
+    desc: "Serve web/ at http://localhost:8000 (single-threaded; no special headers)"
+    cmds:
+      - ./serve.py
+
+  serve-isolated:
+    desc: "Serve web/ with COOP/COEP headers (needed only for a threaded core build)"
+    cmds:
+      - ./serve.py --isolated
+
+  sync-roms:
+    desc: "Refresh web/roms/*.sfc from a sibling llvm-mos-65816 checkout"
+    cmds:
+      - ./sync-roms.sh
+
+  clean:
+    desc: "Remove built core artifacts (keeps emsdk + vendored core clone)"
+    cmds:
+      - rm -f web/cores/*.wasm web/cores/*.js web/cores/*.data web/cores/*.bc

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bsnes-jg-wasm — +mos-a16 SNES demos in the browser</title>
+<style>
+  :root { --bg:#11131a; --fg:#e7e9ee; --dim:#9aa0ad; --accent:#7cc4ff; --line:#262a36; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:15px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { padding:18px 20px 10px; border-bottom:1px solid var(--line); }
+  h1 { margin:0 0 2px; font-size:18px; letter-spacing:.2px; }
+  h1 .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--accent); }
+  .sub { color:var(--dim); font-size:13px; }
+  main { max-width:760px; margin:0 auto; padding:18px 20px 40px; }
+  #game { width:100%; aspect-ratio:8/7; background:#000; border:1px solid var(--line);
+          border-radius:8px; overflow:hidden; }
+  nav { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 10px; }
+  button, label.file { background:#1b1f2a; color:var(--fg); border:1px solid var(--line);
+          border-radius:6px; padding:7px 12px; font-size:13px; cursor:pointer; }
+  button:hover, label.file:hover { border-color:var(--accent); color:var(--accent); }
+  button[aria-current="true"] { border-color:var(--accent); color:var(--accent); }
+  input[type=file] { display:none; }
+  .banner { margin-top:14px; padding:10px 12px; border-radius:6px; font-size:12.5px;
+            background:#171a23; border:1px solid var(--line); color:var(--dim); }
+  .banner b { color:var(--fg); }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--accent); }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="mono">bsnes-jg-wasm</span> — SNES demos in the browser</h1>
+  <div class="sub">Homebrew built by the <code>+mos-a16</code> 65816 toolchain, run on a WebAssembly SNES core.</div>
+</header>
+
+<main>
+  <div id="game" aria-label="emulator screen"></div>
+
+  <nav id="picker">
+    <button data-rom="mandel-zoom" aria-current="true">Mandelbrot zoom</button>
+    <button data-rom="mandel-mode7">Mode-7</button>
+    <button data-rom="mandel-display">Display</button>
+    <button data-rom="mandel-interactive">Interactive</button>
+    <label class="file">Load .sfc… <input id="file" type="file" accept=".sfc,.smc"></label>
+  </nav>
+
+  <div class="banner" id="banner">
+    <b>Showcase mode</b> — running on the EmulatorJS stock SNES core (loaded from CDN). The
+    <b>accurate mode</b> (the exact <b>bsnes-jg</b> core the differential gate trusts) ships after
+    <code>./build.sh</code>; see the <a href="../docs/plans/2026-06-25-bsnes-jg-wasm.md">plan</a>.
+  </div>
+</main>
+
+<script>
+  // EmulatorJS is initialised once per page load. Choosing a bundled ROM navigates with
+  // ?rom=NAME (clean reload); a dropped file starts a one-shot session via an object URL.
+  const DATA = "https://cdn.emulatorjs.org/stable/data/";
+  let started = false;
+
+  function start(gameUrl, name) {
+    if (started) return;
+    started = true;
+    window.EJS_player = "#game";
+    window.EJS_core = "snes";
+    window.EJS_pathtodata = DATA;
+    window.EJS_gameUrl = gameUrl;
+    window.EJS_gameName = name || "demo";
+    window.EJS_startOnLoaded = true;
+    const s = document.createElement("script");
+    s.src = DATA + "loader.js";
+    document.body.appendChild(s);
+  }
+
+  // bundled-ROM buttons → query-param navigation (reliable re-init)
+  for (const b of document.querySelectorAll("#picker button")) {
+    b.addEventListener("click", () => { location.search = "?rom=" + b.dataset.rom; });
+  }
+  // local file → one-shot object URL
+  document.getElementById("file").addEventListener("change", (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    for (const b of document.querySelectorAll("#picker button")) b.removeAttribute("aria-current");
+    start(URL.createObjectURL(f), f.name);
+  });
+
+  // on load: honour ?rom=, default to the zoom demo
+  const rom = new URLSearchParams(location.search).get("rom") || "mandel-zoom";
+  for (const b of document.querySelectorAll("#picker button"))
+    b.setAttribute("aria-current", b.dataset.rom === rom ? "true" : "false");
+  start("roms/" + rom + ".sfc", rom);
+</script>
+</body>
+</html>

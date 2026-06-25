@@ -1,0 +1,17 @@
+# Emscripten SDK (bootstrapped by build.sh — reproducible, not vendored)
+/emsdk/
+
+# Upstream core checkout (cloned by build.sh at a pinned commit)
+/vendor/
+
+# Built core artifacts (reproducible via build.sh)
+/web/cores/*.wasm
+/web/cores/*.js
+/web/cores/*.data
+/web/cores/*.bc
+
+# Misc
+*.log
+.DS_Store
+node_modules/
+__pycache__/

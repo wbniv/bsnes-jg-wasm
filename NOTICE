@@ -1,0 +1,20 @@
+bsnes-jg-wasm — a WebAssembly build of bsnes-jg + a loader page.
+
+This project builds and redistributes the following under the GNU GPL v3:
+
+  bsnes-jg
+    A cycle-accurate Super Famicom / SNES emulator; fork of bsnes v115.
+    Upstream:        https://gitlab.com/jgemu/bsnes   (the "Jolly Good" fork)
+    libretro core:   https://github.com/libretro/bsnes-jg
+    bsnes original:  Near (byuu) et al.
+    License:         GNU General Public License, version 3 (see LICENSE)
+
+The loader page uses EmulatorJS (https://emulatorjs.org), GPLv3, loaded from its
+CDN in "showcase" mode.
+
+Bundled ROMs (web/roms/*.sfc) are homebrew demos compiled by the llvm-mos-65816
+toolchain (https://github.com/wbniv/llvm-mos-65816) from that project's own
+example sources — included here so the page runs out of the box.
+
+The build scripts, loader page, and documentation original to this repository are
+licensed GPLv3 to match the core they ship.
