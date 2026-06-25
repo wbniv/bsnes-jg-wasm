@@ -13,6 +13,11 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 ### Polish
 
+- [ ] **Deploy fast-first-paint `mandel-display`** (impl + verified 2026-06-26): progressive
+  4×4→8×7→16×14→32×28 ROM render + baked 4×4 loader preview landed; in-browser self-check `0x9103`
+  @ WRAM `$0660` / 1400 frames PASS, first visual <0.2 s, monotonic sharpen. Remaining: sync bundle
+  into indri.studio + tag/push (held for confirmation).
+  [plan](docs/plans/2026-06-26-fast-first-paint-for-the-snes-mandelbrot-display.md)
 - [ ] Optional: trim Asyncify cost (size/speed) with an `ASYNCIFY_ONLY`/`ADD` list once the core's
   swap-reachable call set is profiled — only if mobile perf needs it.
 - [ ] Wire self-checks for the other demos (zoom/mode7/interactive) — needs their scripted-input

@@ -45,6 +45,13 @@ cp "$ROOT/web/cores/PROVENANCE.json" "$OUT/cores/" 2>/dev/null || true
 cp "$ROOT/web/roms/$ROM.sfc" "$OUT/roms/"
 cp "$ROOT/web/app.js" "$OUT/app.js"
 
+# Coarse loading-preview image (painted on the canvas while the core downloads). Ship it
+# only if this ROM has one (regenerate with ./make-preview.sh); absence just shows black.
+if [ -f "$ROOT/web/preview/$ROM.png" ]; then
+  mkdir -p "$OUT/preview"
+  cp "$ROOT/web/preview/$ROM.png" "$OUT/preview/"
+fi
+
 # Single-ROM manifest (carries the fidelity self-check metadata for this ROM).
 python3 - "$ROOT/web/roms/manifest.json" "$ROM" "$OUT/roms/manifest.json" <<'PY'
 import json, sys

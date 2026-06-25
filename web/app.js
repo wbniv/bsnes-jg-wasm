@@ -39,6 +39,8 @@
   var imageData = null;
   var runLabel = "";       // status prefix for the running ROM
   var dimsShown = false;   // whether status already carries WxH
+  var revealed = false;    // true once the first non-black live frame has been drawn
+                           //  (until then the baked preview stays on the canvas)
 
   var canvas = document.getElementById("screen");
   var ctx = canvas.getContext("2d", { alpha: false });
@@ -76,13 +78,27 @@
     var yoff = h >= 232 ? 8 : 0;             // skip the top NTSC overscan (active picture starts at line 8)
     var avail = h - yoff;
     var oh = avail < 224 ? avail : 224;
+    var heap = Module.HEAPU32;               // re-fetch each frame (may grow)
+    var base = Module._bjg_video() >>> 2;    // uint32 index
+    // Hold the baked preview until the SNES emits its first non-black frame: mandel-display
+    // force-blanks (solid black) while it computes pass 1, and drawing those boot frames
+    // would flash the preview to black for ~0.3 s before the first coarse image lands.
+    // Sample a sparse grid — a revealed Mandelbrot lights up far more than one in 64 pixels.
+    if (!revealed) {
+      var lit = false;
+      for (var sy = yoff; sy < yoff + oh && !lit; sy += 8) {
+        var sb = base + sy * pitch;
+        for (var sx = 0; sx < ow; sx += 8)
+          if (heap[sb + sx * step] & 0xffffff) { lit = true; break; }
+      }
+      if (!lit) return;                      // still blank — leave the preview up
+      revealed = true;
+    }
     if (!imageData || canvas.width !== ow || canvas.height !== oh) {
       canvas.width = ow; canvas.height = oh;
       imageData = ctx.createImageData(ow, oh);
     }
     if (!dimsShown && runLabel) { status(runLabel + " · " + ow + "×" + oh); dimsShown = true; }
-    var heap = Module.HEAPU32;               // re-fetch each frame (may grow)
-    var base = Module._bjg_video() >>> 2;    // uint32 index
     var out = imageData.data;
     var di = 0;
     for (var y = 0; y < oh; y++) {
@@ -276,6 +292,22 @@
     }, { threshold: 0.05 }).observe(target);
   }
 
+  // Paint the baked coarse preview onto the canvas right away, so a recognizable fractal
+  // (not a black box) shows while the ~3.9 MB core downloads and the ROM force-blanks through
+  // its first compute pass. Replaced by the live framebuffer on the first non-black frame
+  // (see `revealed` in present()). Only mandel-display ships an asset; any ROM without a
+  // preview/<id>.png just 404s the image and shows the default black — no error path needed.
+  function paintPreview(id) {
+    if (!id || !ctx) return;
+    var img = new Image();
+    img.onload = function () {
+      if (revealed) return;                  // live already took over
+      ctx.imageSmoothingEnabled = false;     // crisp nearest-neighbour upscale (the SNES look)
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    img.src = BASE + "preview/" + id + ".png";
+  }
+
   function init() {
     // The picker, file input, verify button and drag-drop target are all
     // optional — an embed may render just the canvas + status. Guard each.
@@ -300,6 +332,10 @@
       });
     }
 
+    // Show the baked preview before anything loads (covers the core download + ROM boot).
+    var bootRom = new URLSearchParams(location.search).get("rom") || DEFAULT_ROM;
+    paintPreview(bootRom);
+
     status("loading core…");
     Promise.all([
       loadCoreScript().then(function (factory) { return factory(); }),
@@ -310,8 +346,7 @@
       manifest = res[1];
       showProvenance();
       observeVisibility();
-      var rom = new URLSearchParams(location.search).get("rom") || DEFAULT_ROM;
-      playUrl(rom);
+      playUrl(bootRom);
     }).catch(function (e) {
       status("");
       if (bannerEl) {

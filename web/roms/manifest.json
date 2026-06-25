@@ -13,11 +13,11 @@
       "id": "mandel-display",
       "title": "Display",
       "selfcheck": {
-        "off": "0x580",
+        "off": "0x660",
         "len": 2,
         "want": "0x9103",
-        "frames": 1000,
-        "label": "gate jgxcheck CRC (corpus_result @ WRAM $0580)"
+        "frames": 1400,
+        "label": "gate jgxcheck CRC (corpus_result @ WRAM $0660)"
       }
     },
     {
