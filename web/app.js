@@ -66,19 +66,27 @@
   function present() {
     var w = Module._bjg_video_w(), h = Module._bjg_video_h(), pitch = Module._bjg_video_pitch();
     if (!w || !h) return;
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w; canvas.height = h;
-      imageData = ctx.createImageData(w, h);
+    // bsnes hands us a 512-wide buffer for lores content (256 logical px doubled)
+    // and ~240 scanlines incl. overscan. Collapse the 2x horizontal doubling and
+    // crop to the 224 visible NTSC lines — the true 256x224 logical frame, square
+    // pixels at the SNES 8:7 aspect (matches the gate's jgxcheck PNG). Without
+    // this the picture is stretched 2x wide.
+    var step = w >= 512 ? 2 : 1;
+    var ow = (w / step) | 0;
+    var oh = h < 224 ? h : 224;
+    if (!imageData || canvas.width !== ow || canvas.height !== oh) {
+      canvas.width = ow; canvas.height = oh;
+      imageData = ctx.createImageData(ow, oh);
     }
-    if (!dimsShown && runLabel) { status(runLabel + " · " + w + "×" + h); dimsShown = true; }
+    if (!dimsShown && runLabel) { status(runLabel + " · " + ow + "×" + oh); dimsShown = true; }
     var heap = Module.HEAPU32;               // re-fetch each frame (may grow)
     var base = Module._bjg_video() >>> 2;    // uint32 index
     var out = imageData.data;
     var di = 0;
-    for (var y = 0; y < h; y++) {
+    for (var y = 0; y < oh; y++) {
       var si = base + y * pitch;
-      for (var x = 0; x < w; x++) {
-        var px = heap[si++];                 // 0x00RRGGBB
+      for (var x = 0; x < ow; x++) {
+        var px = heap[si + x * step];        // 0x00RRGGBB
         out[di++] = (px >>> 16) & 0xff;      // R
         out[di++] = (px >>> 8) & 0xff;       // G
         out[di++] = px & 0xff;               // B
