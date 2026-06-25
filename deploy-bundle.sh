@@ -62,6 +62,18 @@ json.dump({"_comment": m.get("_comment", ""), "roms": roms},
           open(dst, "w"), indent=2)
 PY
 
+# Per-asset content hashes for cache-busting. The page injects them as window.BJG_BUST and
+# app.js appends "?v=<sha>" to every fetch (incl. the wasm via locateFile), so the assets can be
+# served immutable yet a re-sync (same filename, new bytes -> new sha) busts the cache.
+bust_hash() { sha256sum "$1" 2>/dev/null | cut -c1-12; }
+BUST="{"
+for a in app.js cores/bsnes_jg.js cores/bsnes_jg.wasm cores/PROVENANCE.json roms/manifest.json "roms/$ROM.sfc" "preview/$ROM.png"; do
+  [ -f "$OUT/$a" ] || continue
+  BUST="$BUST\"$a\":\"$(bust_hash "$OUT/$a")\","
+done
+BUST="${BUST%,}}"
+APPV="$(bust_hash "$OUT/app.js")"
+
 # Minimal standalone page (used when the bundle URL is visited directly).
 cat > "$OUT/index.html" <<HTML
 <!DOCTYPE html>
@@ -98,8 +110,8 @@ cat > "$OUT/index.html" <<HTML
   </div>
   <div id="banner"></div>
 </main>
-<script>window.BJG_DEFAULT_ROM = "$ROM";</script>
-<script src="app.js"></script>
+<script>window.BJG_DEFAULT_ROM = "$ROM"; window.BJG_BUST = $BUST;</script>
+<script src="app.js?v=$APPV"></script>
 </body>
 </html>
 HTML

@@ -16,6 +16,16 @@
   var BASE = (window.BJG_BASE || "");
   var DEFAULT_ROM = (window.BJG_DEFAULT_ROM || "mandel-display");
 
+  // Content-hash cache-busting. The page (fresh HTML) injects window.BJG_BUST: a map of
+  // relative asset path -> short SHA of that file's bytes. bust() appends "?v=<sha>" so each
+  // asset can be cached immutably forever, yet a re-synced file (same filename, new content =
+  // new sha) gets a NEW url and is re-fetched — no stale ROM after a deploy. Absent map (older
+  // embed) -> plain path, so it still works.
+  function bust(path) {
+    var b = window.BJG_BUST;
+    return BASE + path + (b && b[path] ? "?v=" + b[path] : "");
+  }
+
   // SNES controller bits — must match Bsnes::Input::Gamepad in src/bsnes.hpp.
   var JOY = {
     B: 1 << 15, Y: 1 << 14, Select: 1 << 13, Start: 1 << 12,
@@ -56,7 +66,7 @@
     return new Promise(function (resolve, reject) {
       if (window.BsnesJg) return resolve(window.BsnesJg);
       var s = document.createElement("script");
-      s.src = BASE + "cores/bsnes_jg.js";
+      s.src = bust("cores/bsnes_jg.js");
       s.onload = function () { resolve(window.BsnesJg); };
       s.onerror = function () { reject(new Error("core not built")); };
       document.body.appendChild(s);
@@ -149,7 +159,7 @@
     if (checkEl) { checkEl.textContent = ""; checkEl.className = "badge"; }
     markActive(id);
     status("loading " + id + ".sfc…");
-    return fetch(BASE + "roms/" + id + ".sfc")
+    return fetch(bust("roms/" + id + ".sfc"))
       .then(function (r) { if (!r.ok) throw new Error("fetch " + id); return r.arrayBuffer(); })
       .then(function (buf) {
         if (!loadRomBytes(new Uint8Array(buf))) throw new Error("core rejected ROM");
@@ -208,7 +218,7 @@
 
     stopLoop();
     // re-load this ROM to power on cleanly, like the gate's harness.
-    fetch(BASE + "roms/" + current + ".sfc")
+    fetch(bust("roms/" + current + ".sfc"))
       .then(function (r) { return r.arrayBuffer(); })
       .then(function (buf) {
         loadRomBytes(new Uint8Array(buf));
@@ -264,7 +274,7 @@
   }
 
   function showProvenance() {
-    fetch(BASE + "cores/PROVENANCE.json")
+    fetch(bust("cores/PROVENANCE.json"))
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (p) {
         if (!p || !bannerEl) return;
@@ -305,7 +315,7 @@
       ctx.imageSmoothingEnabled = false;     // crisp nearest-neighbour upscale (the SNES look)
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     };
-    img.src = BASE + "preview/" + id + ".png";
+    img.src = bust("preview/" + id + ".png");
   }
 
   function init() {
@@ -338,8 +348,12 @@
 
     status("loading core…");
     Promise.all([
-      loadCoreScript().then(function (factory) { return factory(); }),
-      fetch(BASE + "roms/manifest.json").then(function (r) { return r.json(); })
+      loadCoreScript().then(function (factory) {
+        return factory({ locateFile: function (p) {           // bust the wasm Emscripten loads
+          return (p && p.slice(-5) === ".wasm") ? bust("cores/" + p) : p;
+        }});
+      }),
+      fetch(bust("roms/manifest.json")).then(function (r) { return r.json(); })
     ]).then(function (res) {
       Module = res[0];
       window.__bjg = Module;     // exposed for debugging / automated checks
