@@ -25,6 +25,11 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 ## Done
 
+- [x] **Mode 7 Mandelbrot, on-SNES + progressive** (2026-06-26): `mandel-display` rewritten to render
+  in Mode 7 — 64×56 per-pixel bitmap computed on the 65816, revealed coarse→fine via **vblank DMA**
+  (no force-blank flash), then a hardware affine **rotate+zoom**. CRC `0x204F` @ WRAM `$0400`/5200 fr.
+  Also: build now defaults to the **a16 toolchain** so `mandel-mode7` builds (was skipped) — and it
+  was made progressive too (128×128 far-WRAM compute, banded vblank reveal, CRC `0x75E8`).
 - [x] **Fast first paint for `mandel-display`** (2026-06-26): progressive 4×4→8×7→16×14→32×28 ROM
   render + baked 4×4 loader preview; first visual <0.2 s, monotonic sharpen. CRC `0x9103` unchanged
   (self-check moved to WRAM `$0660` / 1400 frames). Deployed live (indri `v0.1.72`).
