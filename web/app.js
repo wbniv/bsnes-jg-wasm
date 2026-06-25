@@ -73,7 +73,9 @@
     // this the picture is stretched 2x wide.
     var step = w >= 512 ? 2 : 1;
     var ow = (w / step) | 0;
-    var oh = h < 224 ? h : 224;
+    var yoff = h >= 232 ? 8 : 0;             // skip the top NTSC overscan (active picture starts at line 8)
+    var avail = h - yoff;
+    var oh = avail < 224 ? avail : 224;
     if (!imageData || canvas.width !== ow || canvas.height !== oh) {
       canvas.width = ow; canvas.height = oh;
       imageData = ctx.createImageData(ow, oh);
@@ -84,7 +86,7 @@
     var out = imageData.data;
     var di = 0;
     for (var y = 0; y < oh; y++) {
-      var si = base + y * pitch;
+      var si = base + (y + yoff) * pitch;
       for (var x = 0; x < ow; x++) {
         var px = heap[si + x * step];        // 0x00RRGGBB
         out[di++] = (px >>> 16) & 0xff;      // R
