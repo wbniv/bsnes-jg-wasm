@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# build.sh — reproducibly build the bsnes-jg libretro core to WebAssembly.
+# build.sh — reproducibly build the gate's cycle-accurate SNES core to WebAssembly.
+#
+# Builds jgemu/bsnes 2.1.0 — the EXACT core (version + sha256) the llvm-mos-65816
+# differential gate trusts (its "second leg", dev/jgxcheck.cpp) — to wasm, and
+# links our minimal Jolly-Good-API frontend (web/src/main.cpp) into a single
+# self-contained module the loader page drives. No libretro, no EmulatorJS.
 #
 #   1. bootstrap the Emscripten SDK into ./emsdk (if emcc isn't already on PATH)
-#   2. clone libretro/bsnes-jg into ./vendor at a pinned commit
-#   3. build the core for the emscripten platform
-#   4. copy bsnes_jg_libretro.{wasm,js} into web/cores/
+#   2. fetch + sha256-verify the pinned jgemu/bsnes tarball into ./vendor
+#   3. patch libco with an Emscripten-fiber backend (the stock libco has no wasm
+#      path; see web/src/libco_emscripten.c)
+#   4. build the core static archive (emmake make, vendored libsamplerate)
+#   5. link web/src/main.cpp + libbsnes.a -> web/cores/bsnes_jg.{js,wasm}
 #
 # Everything is reproducible from this repo + a network connection. No manual steps.
 
@@ -14,23 +21,26 @@ usage() {
   cat <<'EOF'
 Usage: ./build.sh [-h]
 
-Builds the bsnes-jg libretro core to WebAssembly (web/cores/).
+Builds bsnes-jg (jgemu/bsnes 2.1.0) + the wasm frontend into web/cores/.
 
 Env overrides:
-  BSNES_JG_PIN   git commit/tag/branch of libretro/bsnes-jg to build
-                 (DEFAULT: master — but PIN this to the commit matching the
-                  llvm-mos-65816 vendor/bsnes-jg revision so "same core" is literally true;
-                  this is verification step 1 in docs/plans/2026-06-25-bsnes-jg-wasm.md)
-  EMSDK_VERSION  Emscripten version to install (DEFAULT: latest)
-  MAKE_TARGET    libretro make invocation override (see NOTE below)
+  BSNES_VER      jgemu/bsnes version to build       (DEFAULT: 2.1.0 — the gate pin)
+  BSNES_SHA256   expected sha256 of the tarball      (DEFAULT: the 2.1.0 hash)
+  EMSDK_VERSION  Emscripten version to install        (DEFAULT: latest)
+  OPT            optimization level for the core+link (DEFAULT: -O3)
 EOF
 }
 [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] && { usage; exit 0; }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PIN="${BSNES_JG_PIN:-master}"
+BSNES_VER="${BSNES_VER:-2.1.0}"
+# sha256 of gitlab.com/jgemu/bsnes/-/archive/2.1.0/bsnes-2.1.0.tar.gz — the same
+# value pinned in llvm-mos-65816 dev/xcheck.sh, so "same core" is literally true.
+BSNES_SHA256="${BSNES_SHA256:-a8e0fd36711406198afe1110ddc6960c9d795f4ab73d0badd8878396ac3d0c42}"
 EMSDK_VERSION="${EMSDK_VERSION:-latest}"
-CORE_REPO="https://github.com/libretro/bsnes-jg.git"
+OPT="${OPT:--O3}"
+CORE_URL="https://gitlab.com/jgemu/bsnes/-/archive/${BSNES_VER}/bsnes-${BSNES_VER}.tar.gz"
+CORE_DIR="$ROOT/vendor/bsnes-jg"
 ts() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 log() { echo "[$(ts)] $*"; }
 
@@ -46,46 +56,90 @@ if ! command -v emcc >/dev/null 2>&1; then
   # shellcheck disable=SC1091
   source "$ROOT/emsdk/emsdk_env.sh"
 fi
-log "using $(emcc --version | head -1)"
+EMCC_VER="$(emcc --version | head -1)"
+log "using $EMCC_VER"
 
-# --- 2. core source (pinned) -------------------------------------------------
+# --- 2. core source (pinned + verified) --------------------------------------
 mkdir -p "$ROOT/vendor"
-CORE_DIR="$ROOT/vendor/bsnes-jg"
-if [ ! -d "$CORE_DIR/.git" ]; then
-  log "cloning $CORE_REPO"
-  git clone "$CORE_REPO" "$CORE_DIR"
+if [ ! -d "$CORE_DIR/src" ]; then
+  log "fetching jgemu/bsnes $BSNES_VER (pinned)"
+  TARBALL="$ROOT/vendor/bsnes-${BSNES_VER}.tar.gz"
+  curl -fsSL "$CORE_URL" -o "$TARBALL"
+  echo "$BSNES_SHA256  $TARBALL" | sha256sum -c -
+  mkdir -p "$CORE_DIR"
+  tar xzf "$TARBALL" -C "$CORE_DIR" --strip-components=1
+  rm -f "$TARBALL"
 fi
-git -C "$CORE_DIR" fetch --all --tags --quiet
-log "checking out pin: $PIN"
-git -C "$CORE_DIR" checkout --quiet "$PIN"
-BUILT_SHA="$(git -C "$CORE_DIR" rev-parse HEAD)"
-log "core source at $BUILT_SHA"
+log "core source: jgemu/bsnes $BSNES_VER (sha256 verified)"
 
-# --- 3. build for emscripten -------------------------------------------------
-# NOTE (verify on first real run — Inc 0): libretro cores are conventionally built
-# with `emmake make platform=emscripten` from the dir holding the libretro Makefile.
-# bsnes-jg's libretro Makefile location/target name is confirmed on the first build;
-# override via MAKE_TARGET / by editing the line below if upstream differs. The
-# emscripten link step must emit a self-contained .js + .wasm (MODULARIZE, the
-# libretro retro_* exports), not a bare .bc — adjust LDFLAGS if the core's Makefile
-# stops at bitcode.
-log "building core (platform=emscripten)"
-( cd "$CORE_DIR" && emmake make ${MAKE_TARGET:-platform=emscripten} -j"$(nproc)" )
+# --- 3. patch libco with an Emscripten-fiber backend -------------------------
+# Stock libco v20 has no wasm path (its dispatcher falls through to sjlj.c, which
+# needs POSIX sigaltstack/raise — absent under Emscripten). Drop our fiber
+# backend in and teach libco.c to use it for __EMSCRIPTEN__.
+cp -f "$ROOT/web/src/libco_emscripten.c" "$CORE_DIR/deps/libco/emscripten.c"
+LIBCO_C="$CORE_DIR/deps/libco/libco.c"
+if ! grep -q '__EMSCRIPTEN__' "$LIBCO_C"; then
+  log "patching deps/libco/libco.c dispatch for __EMSCRIPTEN__"
+  awk '
+    /#elif defined\(_WIN32\)/ && !done {
+      print "  #elif defined(__EMSCRIPTEN__)";
+      print "    #include \"emscripten.c\"";
+      done = 1;
+    }
+    { print }
+  ' "$LIBCO_C" > "$LIBCO_C.tmp" && mv "$LIBCO_C.tmp" "$LIBCO_C"
+fi
+grep -q '__EMSCRIPTEN__' "$LIBCO_C" || { log "ERROR: libco patch failed"; exit 1; }
 
-# --- 4. collect artifacts ----------------------------------------------------
+# --- 4. build the core static archive (wasm) ---------------------------------
+# ENABLE_STATIC=1 DISABLE_MODULE=1 -> objs/libbsnes.a (no .so, no SDL example);
+# USE_VENDORED_SAMPLERATE=1 compiles the bundled libsamplerate into the archive,
+# so the build is fully self-contained (no external -lsamplerate). emmake sets
+# CC=emcc CXX=em++ AR=emar.
+log "building core static archive (emmake make, vendored libsamplerate)"
+emmake make -C "$CORE_DIR" \
+  ENABLE_STATIC=1 DISABLE_MODULE=1 USE_VENDORED_SAMPLERATE=1 \
+  CFLAGS="$OPT" CXXFLAGS="$OPT" \
+  -j"$(nproc)"
+
+ARCHIVE="$(find "$CORE_DIR/objs" -name 'libbsnes.a' | head -1)"
+[ -n "$ARCHIVE" ] || { log "ERROR: core archive (libbsnes.a) not produced — inspect make output" >&2; exit 1; }
+log "core archive: $ARCHIVE"
+
+# --- 5. stage embedded data + link the wasm frontend -------------------------
+# The loader reads the SNES game database from the wasm MEMFS; embed the small
+# .bml files (skip the 2 MB CheatCodes.bml — not needed to load homebrew).
+DATA_STAGE="$ROOT/vendor/.embed/Database"
+rm -rf "$ROOT/vendor/.embed"; mkdir -p "$DATA_STAGE"
+for f in boards.bml SuperFamicom.bml BSMemory.bml SufamiTurbo.bml; do
+  cp "$CORE_DIR/Database/$f" "$DATA_STAGE/"
+done
+
 mkdir -p "$ROOT/web/cores"
-found=0
-while IFS= read -r -d '' f; do
-  cp -v "$f" "$ROOT/web/cores/"
-  found=1
-done < <(find "$CORE_DIR" -maxdepth 3 -name 'bsnes_jg_libretro*.wasm' -o -name 'bsnes_jg_libretro*.js' -print0 2>/dev/null || true)
+EXPORTS='_bjg_load,_bjg_run,_bjg_reset,_bjg_video,_bjg_video_w,_bjg_video_h,_bjg_video_pitch,_bjg_loaded,_bjg_set_input,_bjg_wram,_bjg_wram_size,_malloc,_free,_main'
 
-if [ "$found" -eq 0 ]; then
-  log "ERROR: no bsnes_jg_libretro.{wasm,js} produced — inspect the make output / MAKE_TARGET" >&2
-  exit 1
-fi
+log "linking web/cores/bsnes_jg.js (+ .wasm) with Asyncify"
+em++ $OPT -std=c++11 \
+  -I"$CORE_DIR/src" \
+  "$ROOT/web/src/main.cpp" "$ARCHIVE" \
+  -sASYNCIFY=1 \
+  -sASYNCIFY_STACK_SIZE=131072 \
+  -sMODULARIZE=1 \
+  -sEXPORT_NAME=BsnesJg \
+  -sALLOW_MEMORY_GROWTH=1 \
+  -sINITIAL_MEMORY=67108864 \
+  -sEXPORTED_FUNCTIONS="$EXPORTS" \
+  -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,HEAPU8,HEAPU32 \
+  -sENVIRONMENT=web \
+  --embed-file "$DATA_STAGE"@/bsnes/Database \
+  -o "$ROOT/web/cores/bsnes_jg.js"
 
-# record provenance so the page can display exactly which core it runs
-printf '{ "core": "bsnes-jg", "source": "%s", "commit": "%s", "built": "%s" }\n' \
-  "$CORE_REPO" "$BUILT_SHA" "$(ts)" > "$ROOT/web/cores/PROVENANCE.json"
-log "done — artifacts + PROVENANCE.json in web/cores/"
+[ -f "$ROOT/web/cores/bsnes_jg.wasm" ] || { log "ERROR: no bsnes_jg.wasm emitted" >&2; exit 1; }
+
+# --- 6. provenance -----------------------------------------------------------
+printf '{\n  "core": "bsnes-jg (jgemu/bsnes)",\n  "source": "%s",\n  "version": "%s",\n  "sha256": "%s",\n  "emscripten": "%s",\n  "built": "%s",\n  "note": "the exact core+version the llvm-mos-65816 differential gate trusts (dev/jgxcheck.cpp)"\n}\n' \
+  "$CORE_URL" "$BSNES_VER" "$BSNES_SHA256" "$EMCC_VER" "$(ts)" \
+  > "$ROOT/web/cores/PROVENANCE.json"
+
+log "done — web/cores/bsnes_jg.{js,wasm} + PROVENANCE.json"
+ls -la "$ROOT/web/cores/"

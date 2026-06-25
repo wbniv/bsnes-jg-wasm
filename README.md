@@ -2,13 +2,15 @@
 
 **The cycle-accurate SNES core that gates a compiler's correctness — now in your browser.**
 
-A WebAssembly build of [**bsnes-jg**](https://gitlab.com/jgemu/bsnes) (the Jolly Good fork of
+A WebAssembly build of [**bsnes-jg 2.1.0**](https://gitlab.com/jgemu/bsnes) (the Jolly Good fork of
 bsnes), plus a minimal page that runs `.sfc` homebrew. Its reason to exist: bsnes-jg is the
 **second leg of the differential gate** in the [`llvm-mos-65816`](https://github.com/wbniv/llvm-mos-65816)
 project (a from-source LLVM fork adding native 16-bit-accumulator codegen — `+mos-a16` — for the
 WDC 65816). That gate asserts *host == default@MAME == +mos-a16@MAME == +mos-a16@bsnes-jg*. By
-shipping **the same core** to the web, a browser demo of the `+mos-a16` ROMs is byte-for-byte the
-output the gate already verified — not a snes9x lookalike.
+shipping **the same core** — the exact `2.1.0` tarball the gate pins, by version *and* sha256 — a
+browser demo of the `+mos-a16` ROMs is byte-for-byte the output the gate already verified, not a
+snes9x lookalike. The page proves it: a **Verify fidelity** button reproduces the gate's headless
+WRAM assert (`mandel-display` → `0x9103`) live in the tab.
 
 > **Why bsnes-jg and not snes9x?** snes9x is the turnkey browser default, but it is *not*
 > cycle-accurate and its license is **non-commercial / GPL-incompatible**. bsnes-jg is
@@ -20,46 +22,50 @@ output the gate already verified — not a snes9x lookalike.
 ## What's here
 
 ```
-build.sh            # reproducible: bootstrap emsdk → clone libretro/bsnes-jg @pin → build core → web/cores/
-serve.py            # local static server (single-thread by default; --isolated adds COOP/COEP for threaded builds)
+build.sh            # reproducible: bootstrap emsdk → fetch+sha256-verify jgemu/bsnes 2.1.0 → build → web/cores/
+serve.py            # local static server (single-thread by default; --isolated adds COOP/COEP if ever needed)
 sync-roms.sh        # refresh the bundled demo ROMs from a sibling llvm-mos-65816 checkout
 Taskfile.yml        # task build / serve / sync-roms / clean
 web/
-  index.html        # the loader page (EmulatorJS frontend; ROM picker + drag-drop)
+  index.html        # the loader page (canvas + ROM picker + drag-drop + Verify fidelity)
+  app.js            # drives the core: render framebuffer, keyboard→pad, the fidelity self-check
+  src/main.cpp      # minimal Jolly-Good-API wasm frontend (mirrors the gate's dev/jgxcheck.cpp)
+  src/libco_emscripten.c  # libco backend on Emscripten fibers (stock libco has no wasm path)
   roms/*.sfc        # snapshot of the +mos-a16 graphics demos (Mandelbrot zoom / Mode-7 / display / interactive)
-  cores/            # build.sh drops bsnes_jg_libretro.{wasm,js} here (gitignored — reproducible)
-docs/plans/         # the build plan / contract
+  roms/manifest.json# per-ROM self-check metadata (WRAM offset + expected gate value)
+  cores/            # build.sh drops bsnes_jg.{wasm,js} + PROVENANCE.json here (gitignored — reproducible)
+docs/plans/         # the build plan / contract (+ verification evidence)
 LICENSE  NOTICE     # GPLv3 (the core) + attribution
 ```
 
 ## Quick start
 
 ```sh
-task serve          # serve web/ on http://localhost:8000  (works today — see "Two modes" below)
+task build          # bootstrap emsdk + build the bsnes-jg wasm core into web/cores/  (slow first run)
+task serve          # serve web/ on http://localhost:8000
 ```
 
-Open [http://localhost:8000](http://localhost:8000), pick a demo (or drop your own `.sfc`).
-
-## Build the accurate core
-
-```sh
-task build          # bootstraps emsdk into ./emsdk, clones the core, builds bsnes_jg_libretro.{wasm,js}
-```
+Open [http://localhost:8000](http://localhost:8000), pick a demo (or drop your own `.sfc`), and hit
+**Verify fidelity** to watch the in-browser self-check land the gate's `0x9103`. (If you haven't run
+`build.sh`, the page says so instead of erroring.)
 
 `emsdk` is bootstrapped automatically if `emcc` isn't on `PATH`. First run is slow (downloads the
-Emscripten toolchain); after that it's cached.
+Emscripten toolchain + builds the core); after that it's cached.
 
-## Two accuracy modes (be honest about which you're running)
+Keys: arrows = d-pad, `Z`/`X` = B/A, `A`/`S` = Y/X, `Enter` Start, `Shift` Select, `Q`/`W` = L/R.
 
-| Mode | Core | Status | Use |
-|------|------|--------|-----|
-| **Showcase** (default) | EmulatorJS stock SNES core (loaded from CDN) | **works now, zero build** | quick "run it in a browser" demo |
-| **Accurate** | the `bsnes-jg` core from `build.sh` | wiring in progress (see [the plan](docs/plans/2026-06-25-bsnes-jg-wasm.md)) | the credibility claim: *same core the gate trusts* |
+## How "same core" is made literal
 
-The showcase mode gets you a working page immediately. The accurate mode — pointing the page at the
-locally built `bsnes-jg` core and proving its framebuffer CRC matches the gate's headless
-`jgxcheck` value — is the project's headline deliverable and is tracked in the plan's verification
-steps.
+- **The pin.** `build.sh` fetches the **`gitlab.com/jgemu/bsnes` 2.1.0** tarball and checks its
+  sha256 against the value pinned in `llvm-mos-65816/dev/xcheck.sh` — the exact bytes the gate
+  builds. (Not `libretro/bsnes-jg`; that's a different repo. See the plan's Decisions §4.)
+- **The frontend.** `web/src/main.cpp` drives the same `Bsnes::` C++ API the gate's headless harness
+  (`dev/jgxcheck.cpp`) uses — `load`/`power`/`run`, `getMemoryRaw(MainRAM)` — so the page can read
+  WRAM and assert the gate's value. No libretro, no EmulatorJS.
+- **The wasm wrinkle.** bsnes-jg threads cooperatively via libco, which has no WebAssembly code path;
+  `web/src/libco_emscripten.c` reimplements it on Emscripten fibers (the build links `-sASYNCIFY`).
+- **The proof.** The **Verify fidelity** button powers on `mandel-display`, runs 1000 frames, reads
+  WRAM `$0580`, and shows `0x9103 == gate`. That's the gate's own assert, in a browser tab.
 
 ## License
 

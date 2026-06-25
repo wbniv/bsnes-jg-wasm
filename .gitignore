@@ -9,6 +9,10 @@
 /web/cores/*.js
 /web/cores/*.data
 /web/cores/*.bc
+/web/cores/PROVENANCE.json
+
+# Deferral-tracking hook state
+/docs/plans/.deferrals-seen
 
 # Misc
 *.log

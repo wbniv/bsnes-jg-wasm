@@ -33,4 +33,4 @@ tasks:
   clean:
     desc: "Remove built core artifacts (keeps emsdk + vendored core clone)"
     cmds:
-      - rm -f web/cores/*.wasm web/cores/*.js web/cores/*.data web/cores/*.bc
+      - rm -f web/cores/*.wasm web/cores/*.js web/cores/*.data web/cores/*.bc web/cores/PROVENANCE.json

@@ -4,26 +4,21 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 ## Open
 
-### Accurate mode (the headline — same core the gate trusts)
+### Accurate mode — remaining
 
-- [ ] **Pin + build the core.** Set `BSNES_JG_PIN` to the llvm-mos-65816 `vendor/bsnes-jg` revision,
-  run `task build`, confirm `web/cores/bsnes_jg_libretro.{wasm,js}` + `PROVENANCE.json`.
-  (Plan verification step 1.)
-- [ ] **Wire the page to the built core.** Resolve EmulatorJS custom-core packaging (or a minimal
-  libretro-web loader); make `index.html` boot a demo on the local bsnes-jg core, not the CDN stock
-  core. (Plan step 2; the concrete unknown.)
-- [ ] **[verify] Fidelity CRC match.** In-browser framebuffer CRC == gate `jgxcheck` CRC
-  (`0x9103` for `mandel-display`). The proof of "byte-for-byte the gate's output". (Plan step 3.)
-- [ ] **Perf check** — 60 fps on a mid laptop + a phone for the zoom/Mode-7 demos.
+- [ ] **Perf on a phone.** Laptop is ~82 fps raw (>60 with headroom); Asyncify adds overhead, so
+  measure a real low-end phone for the zoom/Mode-7 demos before claiming mobile.
+- [ ] **Firefox spot-check.** End-to-end is verified in Chromium; load the page once in current
+  Firefox (single-thread, no COOP/COEP) to confirm before deploy. (Plan step 4.)
 
 ### Polish
 
-- [ ] Flip the page banner from "showcase" to "accurate" once the custom core is wired; show
-  `PROVENANCE.json` (core commit) in the UI.
-- [ ] Confirm `build.sh`'s `MAKE_TARGET` against bsnes-jg's actual libretro Makefile on first run;
-  adjust LDFLAGS if it stops at `.bc` instead of emitting `.js`+`.wasm`.
 - [ ] Deploy: static host (Cloudflare Pages per the `cloudflare-static-site` skill); single-thread →
-  no special headers. Publish GPLv3 source alongside.
+  no special headers. Publish GPLv3 source alongside. Note: `bsnes_jg.wasm` is ~3.9 MB.
+- [ ] Optional: trim Asyncify cost (size/speed) with an `ASYNCIFY_ONLY`/`ADD` list once the core's
+  swap-reachable call set is profiled — only if mobile perf needs it.
+- [ ] Wire self-checks for the other demos (zoom/mode7/interactive) — needs their scripted-input
+  gates (see `dev/mandel-interactive.sh`), not just a boot-time WRAM read.
 
 ### Later (separate)
 
@@ -32,6 +27,14 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 ## Done
 
-- [x] Scaffolded the repo (2026-06-25): reproducible `build.sh` (emsdk bootstrap → pinned clone →
-  WASM), EmulatorJS loader page (ROM picker + drag-drop, showcase mode working), `serve.py`,
+- [x] **Accurate mode wired + verified** (2026-06-25): built jgemu/bsnes 2.1.0 (sha256-pinned, the
+  gate core) to wasm via a custom Jolly-Good-API frontend + Emscripten-fiber libco backend + Asyncify;
+  canvas loader; in-browser self-check reads WRAM `0x9103` == gate. Verification 1–5 + perf PASS.
+- [x] **[verify] Fidelity CRC match** (2026-06-25): in-browser `mandel-display` WRAM `$0580` ==
+  `0x9103` == gate `jgxcheck`, headless Chrome — PASS. (Plan step 3.)
+- [x] **Page flipped to accurate mode** (2026-06-25): EmulatorJS/CDN path removed; live PROVENANCE
+  banner shows core version + sha256; `Verify fidelity` button added. (Plan polish.)
+- [x] **build.sh build target resolved** (2026-06-25): `emmake make ENABLE_STATIC=1 DISABLE_MODULE=1
+  USE_VENDORED_SAMPLERATE=1` → `libbsnes.a`, then `em++` links the frontend to `.js`+`.wasm`.
+- [x] Scaffolded the repo (2026-06-25): reproducible `build.sh`, loader page, `serve.py`,
   `sync-roms.sh`, `Taskfile.yml`, GPLv3 `LICENSE`+`NOTICE`, bundled demo ROMs, the plan.

@@ -1,0 +1,28 @@
+{
+  "_comment": "Demo ROMs (homebrew built by the llvm-mos-65816 +mos-a16 toolchain) and their in-browser fidelity self-checks. A selfcheck mirrors the gate's headless dev/jgxcheck.cpp assert exactly: power on, run `frames` frames, read `len` little-endian bytes of WRAM at `off`, require == `want`. Matching values prove this wasm build is byte-for-byte the core the gate trusts.",
+  "roms": [
+    {
+      "id": "mandel-zoom",
+      "title": "Mandelbrot zoom"
+    },
+    {
+      "id": "mandel-mode7",
+      "title": "Mode-7"
+    },
+    {
+      "id": "mandel-display",
+      "title": "Display",
+      "selfcheck": {
+        "off": "0x580",
+        "len": 2,
+        "want": "0x9103",
+        "frames": 1000,
+        "label": "gate jgxcheck CRC (corpus_result @ WRAM $0580)"
+      }
+    },
+    {
+      "id": "mandel-interactive",
+      "title": "Interactive"
+    }
+  ]
+}
