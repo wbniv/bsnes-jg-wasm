@@ -214,7 +214,15 @@ Evidence captured 2026-06-26 (native `build/jgxcheck` + headless Chrome via CDP)
    **PASS.**
 
 7. **Deploy** — run the chain above; confirm live at the indri URL shows fast first paint.
-   *(Pending — held for confirmation, since it tags + pushes a production release to indri.studio.)*
+
+   ```
+   indri.studio commit b2c7632, tag v0.1.72. (Auto tag-trigger didn't fire — known GH Actions
+   flake; v0.1.68–71 all fired. Dispatched deploy.yml manually on the tag; run succeeded.)
+   Live https://indri.studio/apps/llvm-mos-65816/play/ : manifest off=0x660 frames=1400,
+   preview/mandel-display.png 200, ROM byte-identical, app.js carries paintPreview/revealed.
+   Headless self-check against PRODUCTION: got 0x9103, no console errors -> PASS.
+   ```
+   **PASS** (deployed + verified live 2026-06-26).
 
 ## Notes / alternatives (rejected)
 

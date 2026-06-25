@@ -13,11 +13,6 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 ### Polish
 
-- [ ] **Deploy fast-first-paint `mandel-display`** (impl + verified 2026-06-26): progressive
-  4×4→8×7→16×14→32×28 ROM render + baked 4×4 loader preview landed; in-browser self-check `0x9103`
-  @ WRAM `$0660` / 1400 frames PASS, first visual <0.2 s, monotonic sharpen. Remaining: sync bundle
-  into indri.studio + tag/push (held for confirmation).
-  [plan](docs/plans/2026-06-26-fast-first-paint-for-the-snes-mandelbrot-display.md)
 - [ ] Optional: trim Asyncify cost (size/speed) with an `ASYNCIFY_ONLY`/`ADD` list once the core's
   swap-reachable call set is profiled — only if mobile perf needs it.
 - [ ] Wire self-checks for the other demos (zoom/mode7/interactive) — needs their scripted-input
@@ -30,6 +25,10 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 ## Done
 
+- [x] **Fast first paint for `mandel-display`** (2026-06-26): progressive 4×4→8×7→16×14→32×28 ROM
+  render + baked 4×4 loader preview; first visual <0.2 s, monotonic sharpen. CRC `0x9103` unchanged
+  (self-check moved to WRAM `$0660` / 1400 frames). Deployed live (indri `v0.1.72`).
+  [plan](docs/plans/2026-06-26-fast-first-paint-for-the-snes-mandelbrot-display.md)
 - [x] **Deployed to indri.studio** (2026-06-25): the live emulator is embedded inline on
   [`/apps/llvm-mos-65816/`](https://indri.studio/apps/llvm-mos-65816/) running `mandel-display` + the
   `0x9103` self-check; `task bundle` → `dist-bundle/`, synced into indri's `public/`. Prod CSP block
