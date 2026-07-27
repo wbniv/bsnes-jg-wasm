@@ -23,6 +23,14 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 - [T3] **Showroom** — a demo-reel page consuming this core (curated `+mos-a16` productions). Its own
   effort; this repo just provides the `.wasm`.
 
+## Watch
+
+_Nothing being watched._
+
+## Parked
+
+_Nothing parked._
+
 ## Done
 
 - [x] **Mode 7 Mandelbrot, on-SNES + progressive** (2026-06-26): `mandel-display` rewritten to render
