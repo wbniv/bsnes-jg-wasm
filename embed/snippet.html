@@ -1,0 +1,38 @@
+<!-- @wbniv/bsnes-jg-player — framework-agnostic embed.
+     Prereq: `npx bsnes-jg-player sync <staticdir>/play` vendored the engine, and you
+     added your ROM as play/roms/<slug>.sfc + an entry in play/roms/manifest.json
+     (+ optional play/preview/<slug>.png poster).
+
+     BOOT CONTRACT (what app.js reads):
+       window.BJG_BASE         url base of the play dir, trailing slash ('/play/')
+       window.BJG_DEFAULT_ROM  rom id to boot (falls back to ?rom= query param)
+       window.BJG_BUST         optional {relpath: shortsha} map -> '?v=' cache busting
+     Element ids (all optional except #screen):
+       #screen        the 256x224 canvas app.js draws into
+       #status        text status line     #checkresult  fidelity badge
+       #verify        self-check button    #fullscreen   fullscreen button
+       #banner        error/provenance     #game         drag-drop target wrapper
+     Keyboard map (fixed): arrows = D-pad, Z/X = B/A, A/S = Y/X, Q/W = L/R,
+       Enter = Start, Shift = Select.
+     Manifest extras per ROM: "selfcheck" {off,len,want,frames,label} powers the
+       Verify button; "touchNav" {left:[x,y,w,h], right:[x,y,w,h]} maps canvas taps
+       to pad Left/Right (for ROMs that draw their own chevrons). -->
+<link rel="stylesheet" href="player.css">
+
+<section id="bjg-embed" class="rp-player" aria-label="Live SNES emulator">
+  <div class="rp-screen"><canvas id="screen" width="256" height="224" aria-label="SNES screen"></canvas></div>
+  <div class="rp-row">
+    <span id="status" class="rp-status">loading core…</span>
+    <span id="checkresult" class="rp-badge"></span>
+    <button id="verify" class="rp-btn" disabled>Verify fidelity</button>
+    <button id="fullscreen" class="rp-btn">Fullscreen</button>
+  </div>
+  <p class="rp-keys">Arrows: D-pad · Z/X: B/A · Enter: Start.</p>
+  <p id="banner" class="rp-banner"></p>
+</section>
+
+<script>
+  window.BJG_BASE = '/play/';
+  window.BJG_DEFAULT_ROM = 'mandel-display';   /* your rom id here */
+</script>
+<script src="/play/app.js"></script>

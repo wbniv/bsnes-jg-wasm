@@ -19,6 +19,56 @@ WRAM assert (`mandel-display` → `0x9103`) live in the tab.
 
 ---
 
+## The npm package — `@wbniv/bsnes-jg-player`
+
+This repo doubles as an npm package so any site can vendor the player without touching Emscripten:
+
+```sh
+npm i @wbniv/bsnes-jg-player          # or: npm i git+https://github.com/wbniv/bsnes-jg-wasm.git
+npx bsnes-jg-player sync public/play  # vendor app.js + cores/* (+ ENGINE_VERSION stamp)
+npx bsnes-jg-player sync public/play --demo   # also seed the mandel-display demo ROM
+```
+
+`sync` never touches `roms/` or `preview/` (your site's content) unless `--demo`. In CI, run
+`npx bsnes-jg-player sync --check public/play` — it exits 1 if the vendored engine drifts from the
+installed package version (byte-for-byte sha256), which replaces any "keep the copies identical by
+hand" discipline. `dist/` (the published payload) is **committed**: CI rebuilds the core from source
+and diffs it against `dist/engine/cores/`, so publishes never wait on an emsdk build and a git-URL
+install works.
+
+**Astro sites** get a component and an optional build-time warning light:
+
+```astro
+---
+import SnesPlayer from '@wbniv/bsnes-jg-player/SnesPlayer.astro';
+---
+<SnesPlayer slug="my-rom" title="My ROM" keys="Arrows: pan · Z: fire." />
+```
+
+```js
+// astro.config.mjs — warns (or mode:'error' fails) when public/play predates the package
+import bsnesPlayer from '@wbniv/bsnes-jg-player/integration';
+export default defineConfig({ integrations: [bsnesPlayer()] });
+```
+
+**Any other stack**: copy the documented block from [`embed/snippet.html`](embed/snippet.html) +
+[`embed/player.css`](embed/player.css).
+
+### Boot contract (what `app.js` reads)
+
+| Surface | Meaning |
+|---|---|
+| `window.BJG_BASE` | URL base of the play dir, with trailing slash (default `''` = relative) |
+| `window.BJG_DEFAULT_ROM` | ROM id to boot (a `?rom=` query param wins) |
+| `window.BJG_BUST` | optional `{relpath: shortsha}` map → `?v=` immutable-cache busting |
+| `#screen` | the 256×224 canvas (required) |
+| `#status` `#checkresult` `#verify` `#banner` `#fullscreen` `#game` | status line · fidelity badge · self-check button · errors/provenance · fullscreen button · drag-drop wrapper (all optional) |
+| manifest `selfcheck` | `{off,len,want,frames,label}` — powers **Verify fidelity** (run N frames, assert WRAM) |
+| manifest `touchNav` | `{left:[x,y,w,h], right:[x,y,w,h]}` — canvas taps press pad Left/Right (for ROMs drawing their own chevrons) |
+
+Keyboard map (fixed): arrows = D-pad, `Z`/`X` = B/A, `A`/`S` = Y/X, `Q`/`W` = L/R, `Enter` = Start,
+`Shift` = Select.
+
 ## What's here
 
 ```
@@ -34,6 +84,11 @@ web/
   roms/*.sfc        # snapshot of the +mos-a16 graphics demos (Mandelbrot zoom / Mode-7 / display / interactive)
   roms/manifest.json# per-ROM self-check metadata (WRAM offset + expected gate value)
   cores/            # build.sh drops bsnes_jg.{wasm,js} + PROVENANCE.json here (gitignored — reproducible)
+package.json        # @wbniv/bsnes-jg-player (see above)
+bin/sync.mjs        # the sync CLI (vendor / --check drift gate / version)
+dist/               # COMMITTED npm payload: engine (app.js + cores) + demo ROM — staged by scripts/stage-dist.sh
+astro/              # SnesPlayer.astro component + optional integration (ENGINE_VERSION warning light)
+embed/              # framework-agnostic snippet.html + player.css
 docs/plans/         # the build plan / contract (+ verification evidence)
 LICENSE  NOTICE     # GPLv3 (the core) + attribution
 ```

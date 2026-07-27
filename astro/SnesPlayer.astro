@@ -1,0 +1,84 @@
+---
+// <SnesPlayer slug="..." /> — the packaged bsnes-jg WASM player as one component.
+//
+// Renders the #bjg-embed block (canvas + status row + verify/fullscreen buttons),
+// computes the cache-bust map at build time, and emits the boot script. The engine
+// files must already be vendored into `public{playBase}` via `bsnes-jg-player sync`;
+// the ROM (`roms/<slug>.sfc`), manifest entry, and preview PNG are site content.
+//
+// Cache-busting: each play asset is hashed at build time -> window.BJG_BUST
+// (path -> short sha); app.js appends "?v=<sha>" so the edge caches immutably yet
+// a re-synced asset gets a fresh URL. Missing files degrade to plain paths.
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import '../embed/player.css';
+
+interface Props {
+  /** ROM id: roms/<slug>.sfc + its manifest entry (+ preview/<slug>.png). */
+  slug: string;
+  /** Accessible label for the player region; defaults to the slug. */
+  title?: string;
+  /** One-line key help shown under the screen (action <- key wording). */
+  keys?: string;
+  /** URL base the engine was synced to (default '/play'). */
+  playBase?: string;
+  /** Show the fullscreen button (default true). */
+  fullscreen?: boolean;
+  /** Extra class(es) on the wrapper. */
+  class?: string;
+}
+
+const { slug, title = slug, keys, playBase = '/play', fullscreen = true, class: klass } = Astro.props;
+
+const base = playBase.endsWith('/') ? playBase : playBase + '/';
+const PLAY = 'public' + (base.startsWith('/') ? base : '/' + base);
+const BUST_ASSETS = [
+  'app.js', 'cores/bsnes_jg.js', 'cores/bsnes_jg.wasm', 'cores/PROVENANCE.json',
+  'roms/manifest.json', `roms/${slug}.sfc`, `preview/${slug}.png`,
+];
+const bust: Record<string, string> = {};
+for (const a of BUST_ASSETS) {
+  try { bust[a] = createHash('sha256').update(readFileSync(`${PLAY}${a}`)).digest('hex').slice(0, 12); } catch { /* degrade to plain path */ }
+}
+const appV = bust['app.js'] ?? '';
+---
+
+<section id="bjg-embed" class:list={['rp-player', klass]} aria-label={`Live SNES emulator running ${title}`}>
+  <div class="rp-screen"><canvas id="screen" width="256" height="224" aria-label="SNES screen"></canvas></div>
+  <div class="rp-row">
+    <span id="status" class="rp-status">loading core…</span>
+    <span id="checkresult" class="rp-badge"></span>
+    <button id="verify" class="rp-btn" disabled>Verify fidelity</button>
+    {fullscreen && <button id="fullscreen" class="rp-btn">Fullscreen</button>}
+  </div>
+  {keys && <p class="rp-keys" set:html={keys} />}
+  <slot />
+  <p id="banner" class="rp-banner"></p>
+  <p class="rp-hint">Click the screen, then play. (Tab away and it pauses.)</p>
+</section>
+
+<script is:inline define:vars={{ bust, appV, slug, base }}>
+  // (Re)boot the player on each page-load so it survives view transitions.
+  function bootEmulator() {
+    if (!document.getElementById('bjg-embed')) return;
+    if (window.__bjgStop) { try { window.__bjgStop(); } catch (e) {} }
+    window.BJG_BASE = base;
+    window.BJG_DEFAULT_ROM = slug;
+    window.BJG_BUST = bust;
+    window.BsnesJg = undefined;
+    window.__bjg = undefined;
+    var old = document.getElementById('bjg-appjs');
+    if (old) old.remove();
+    var s = document.createElement('script');
+    s.id = 'bjg-appjs';
+    s.src = base + 'app.js' + (appV ? '?v=' + appV : '');
+    document.body.appendChild(s);
+  }
+  if (!window.__bjgReg) {
+    window.__bjgReg = true;
+    document.addEventListener('astro:page-load', bootEmulator);
+  }
+  // Sites without a ClientRouter never fire astro:page-load — boot directly too.
+  if (document.readyState !== 'loading') bootEmulator();
+  else document.addEventListener('DOMContentLoaded', bootEmulator);
+</script>
