@@ -22,8 +22,6 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 - [T1] **First publish (manual prereq)**: create the npm account owning `@wbniv`, mint a granular
   automation token for this package, add repo secret `NPM_TOKEN`, then `git tag v1.0.0 && git push --tags`.
-- [T2] **[verify T2] CI green on GitHub**: push the branch, confirm the reproducibility gate passes
-  (first real cross-machine test of emcc 6.0.1 determinism — if it fails, restage dist/ per ci.yml note).
 - [T3] **Phase C — indri.studio adoption**: install package; replace `scripts/sync-llvm-mos-emulator.sh`
   with the sync CLI; `EmulatorEmbed.astro` → `<SnesPlayer playBase="/apps/llvm-mos-65816/play">`;
   Base.astro boot logic removed; indri inherits poster clear-to-black (intentional; flag it).
@@ -45,6 +43,7 @@ _Nothing parked._
 
 ## Done
 
+- [x] 2026-07-27 — [npm-package] CI green on GH ([run 30303535793](https://github.com/wbniv/bsnes-jg-wasm/actions/runs/30303535793)): functional gate (bitwise repro disproved cross-host; glue+CRC gate instead).
 - [x] 2026-07-27 — [npm-package] A5: CI (repro+fidelity+sync gates) + publish.yml + Taskfile tasks; ?verify=1 headless hook. See [plan](docs/plans/2026-07-27-npm-player-package.md).
 - [x] 2026-07-27 — [npm-package] A4: SnesPlayer.astro + integration + embed snippet/css + README boot contract. See [plan](docs/plans/2026-07-27-npm-player-package.md).
 - [x] 2026-07-27 — [npm-package] A2–A3: package.json + committed dist/ + bin/sync.mjs (sync/--demo/--check). See [plan](docs/plans/2026-07-27-npm-player-package.md).
