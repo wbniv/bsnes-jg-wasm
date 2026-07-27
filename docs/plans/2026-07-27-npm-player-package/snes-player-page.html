@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Mockup — migrated /snes/blossom/ via SnesPlayer component</title>
+<meta name="viewport" content="width=1440">
+<style>
+  :root{--bg:#16171a;--bg-soft:#1f2125;--ink:#e8e6e0;--ink-dim:#8a857a;--rule:#2c2e33;--accent:#c2410c;--accent-bg:rgba(194,65,12,.14)}
+  *{box-sizing:border-box;margin:0}
+  body{width:1440px;min-height:900px;background:var(--bg);color:var(--ink);font:16px/1.6 Georgia,serif}
+  .mock-note{position:fixed;right:16px;top:16px;background:var(--accent);color:#fff;font:11px/1.4 ui-monospace,monospace;
+    padding:6px 10px;border-radius:4px;max-width:300px;z-index:9;opacity:.92}
+  .wrap{max-width:860px;margin:0 auto;padding:48px 24px}
+  .crumb{font:12px ui-monospace,monospace;color:var(--ink-dim);letter-spacing:.08em}
+  .crumb a{color:var(--accent);text-decoration:none}
+  h1{font-size:34px;margin:10px 0 4px;letter-spacing:-.01em}
+  .chip{display:inline-block;margin:6px 0 14px;padding:3px 10px;font:11px ui-monospace,monospace;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px}
+  .lede{color:var(--ink-dim);font-size:17px;margin-bottom:26px}
+  /* ---- SnesPlayer component (from @wbniv/bsnes-jg-player embed/player.css) ---- */
+  .rp-player{background:var(--bg-soft);border:1px solid var(--rule);border-radius:10px;padding:18px;margin-bottom:34px}
+  .rp-screen{background:#000;border-radius:4px;overflow:visible}
+  .rp-screen canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+  .rp-row{display:flex;align-items:center;gap:12px;margin-top:12px;font:13px ui-monospace,monospace}
+  .rp-status{color:var(--ink-dim);flex:1}
+  .rp-badge{color:#3fbf6f;border:1px solid #3fbf6f;border-radius:4px;padding:1px 8px;font-size:12px}
+  .rp-btn{background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:5px;
+    padding:5px 14px;font:12px ui-monospace,monospace;cursor:pointer}
+  .rp-btn:hover{background:var(--accent-bg)}
+  .rp-keys{font:12px ui-monospace,monospace;color:var(--ink-dim);margin-top:10px}
+  .rp-engine{font:10px ui-monospace,monospace;color:#4c4f56;margin-top:8px;text-align:right}
+  /* ---- controls + prose (from [slug].astro + MDX <Content/>) ---- */
+  h2{font-size:21px;margin:30px 0 10px;color:var(--ink)}
+  table{border-collapse:collapse;font:13px ui-monospace,monospace;width:100%;margin:8px 0 18px}
+  td,th{border:1px solid var(--rule);padding:6px 12px;text-align:left}
+  th{color:var(--accent);font-weight:600;letter-spacing:.06em}
+  td:first-child{color:var(--ink);white-space:nowrap;width:34%}
+  td{color:var(--ink-dim)}
+  p.doc{color:var(--ink);margin:10px 0}
+  code{background:var(--bg-soft);border:1px solid var(--rule);border-radius:3px;padding:1px 5px;
+    font:.85em ui-monospace,monospace;color:#d8965f}
+  .src-tag{margin-top:40px;padding-top:14px;border-top:1px solid var(--rule);font:11px ui-monospace,monospace;color:#4c4f56}
+</style></head><body>
+<div class="mock-note">MOCKUP — biohack.net /snes/blossom/ after Phase B: page = [slug].astro + &lt;SnesPlayer/&gt; + MDX prose. Everything inside the rounded box comes from the npm package; everything below it from src/content/snes/blossom.mdx.</div>
+<div class="wrap">
+  <div class="crumb"><a href="#">bioHACK•NET</a> / <a href="#">snes</a> / blossom</div>
+  <h1>Blossom</h1>
+  <span class="chip">Generative Art</span>
+  <p class="lede">A procedural cherry-tree grower: branching L-system, petal physics, and a WRAM-hashed
+  deterministic corpus — all on the 3.58&nbsp;MHz 65816.</p>
+
+  <section class="rp-player" aria-label="Live SNES demo">
+    <div class="rp-screen"><canvas id="screen" width="256" height="224"></canvas></div>
+    <div class="rp-row">
+      <span class="rp-status">running · blossom.sfc · 256×224 @ 60&nbsp;fps</span>
+      <span class="rp-badge">✓ fidelity PASS</span>
+      <button class="rp-btn">Verify fidelity</button>
+      <button class="rp-btn">Fullscreen</button>
+    </div>
+    <p class="rp-keys">Space / B: drop a seed · Arrows: pan the wind field · Enter: reset the orchard.</p>
+    <p class="rp-engine">engine @wbniv/bsnes-jg-player 1.0.0 · bsnes-jg 2.1.0 · synced, no drift</p>
+  </section>
+
+  <h2>Controls</h2>
+  <table>
+    <tr><th>Action</th><th>Key</th></tr>
+    <tr><td>Drop a seed</td><td>Space or Z (B button)</td></tr>
+    <tr><td>Pan the wind field</td><td>Arrow keys (D-pad)</td></tr>
+    <tr><td>Reset the orchard</td><td>Enter (Start)</td></tr>
+  </table>
+
+  <h2>Notes</h2>
+  <p class="doc">The value bar along the <b>top edge</b> shows live petal counts — this is the row band the
+  <code>yoff</code> overscan decision affects, so this page is one of the two visual-gate references.</p>
+  <p class="doc">The self-check powers on, runs 3000 frames, and asserts WRAM <code>0x54</code> ==
+  <code>0x9047</code> — the same gate the headless CI runs, proving the shipped wasm is the trusted core.</p>
+
+  <div class="src-tag">rendered by src/pages/snes/[slug].astro · prose from src/content/snes/blossom.mdx ·
+  player from node_modules/@wbniv/bsnes-jg-player</div>
+</div>
+<script>
+// Fake "live" SNES frame: draw a cherry tree-ish scene into the 256x224 canvas so the
+// mockup shows a lit screen, plus the top value bar the yoff gate cares about.
+(function(){
+  var c=document.getElementById('screen'),x=c.getContext('2d');
+  x.fillStyle='#0a0d18';x.fillRect(0,0,256,224);
+  var g=x.createLinearGradient(0,0,0,224);g.addColorStop(0,'#131a33');g.addColorStop(1,'#241222');
+  x.fillStyle=g;x.fillRect(0,8,256,216);
+  // top HUD value bar (rows 0-7) — the contested overscan band
+  x.fillStyle='#1c2030';x.fillRect(0,0,256,8);
+  for(var i=0;i<32;i++){x.fillStyle=i<19?'#e8825a':'#3a2f3c';x.fillRect(2+i*8,2,6,4);}
+  // ground
+  x.fillStyle='#1b1430';x.fillRect(0,196,256,28);
+  // trunk + branches (deterministic pseudo-random)
+  var s=42;function r(){s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff}
+  x.strokeStyle='#5a3a2e';
+  function br(px,py,a,l,w){if(w<0.5||l<3)return;x.lineWidth=w;x.beginPath();x.moveTo(px,py);
+    var nx=px+Math.cos(a)*l,ny=py+Math.sin(a)*l;x.lineTo(nx,ny);x.stroke();
+    br(nx,ny,a-0.35-r()*0.25,l*0.75,w*0.7);br(nx,ny,a+0.35+r()*0.25,l*0.72,w*0.7);
+    if(w<1.6){x.fillStyle=r()<0.5?'#e89ab2':'#f2c4d0';x.fillRect(nx-1,ny-1,3,2);}}
+  br(128,200,-Math.PI/2,42,5);
+  // drifting petals
+  for(var p=0;p<60;p++){x.fillStyle=r()<0.5?'#e89ab2':'#c46a86';x.fillRect(r()*256,10+r()*200,2,1);}
+})();
+</script>
+</body></html>
