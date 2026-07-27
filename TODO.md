@@ -22,11 +22,6 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 - [T1] **First publish (manual prereq)**: create the npm account owning `@wbniv`, mint a granular
   automation token for this package, add repo secret `NPM_TOKEN`, then `git tag v1.0.0 && git push --tags`.
-- [T3] **Phase C — indri.studio adoption**: install package; replace `scripts/sync-llvm-mos-emulator.sh`
-  with the sync CLI; `EmulatorEmbed.astro` → `<SnesPlayer playBase="/apps/llvm-mos-65816/play">`;
-  Base.astro boot logic removed; indri inherits poster clear-to-black (intentional; flag it).
-- [T2] **Phase C — snes-rom-page skill**: delete vendored `engine/`; scaffold.sh → ROM+preview copy,
-  manifest entry, `src/content/snes/<slug>.mdx` stub; drop snes-demos.ts append; update SKILL.md.
 
 ### Later (separate)
 
@@ -43,6 +38,8 @@ _Nothing parked._
 
 ## Done
 
+- [x] 2026-07-27 — [npm-package] Phase C: indri adopts the package (kept own embed markup, deliberate); snes-rom-page skill v2 (no vendored engine).
+- [x] 2026-07-27 — [npm-package] Phase B: biohack.net migrated + deployed (v1.0.307); prod selfcheck PASS. See [plan](docs/plans/2026-07-27-npm-player-package.md).
 - [x] 2026-07-27 — [npm-package] CI green on GH ([run 30303535793](https://github.com/wbniv/bsnes-jg-wasm/actions/runs/30303535793)): functional gate (bitwise repro disproved cross-host; glue+CRC gate instead).
 - [x] 2026-07-27 — [npm-package] A5: CI (repro+fidelity+sync gates) + publish.yml + Taskfile tasks; ?verify=1 headless hook. See [plan](docs/plans/2026-07-27-npm-player-package.md).
 - [x] 2026-07-27 — [npm-package] A4: SnesPlayer.astro + integration + embed snippet/css + README boot contract. See [plan](docs/plans/2026-07-27-npm-player-package.md).
