@@ -20,13 +20,10 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 ### npm package — [plan](docs/plans/2026-07-27-npm-player-package.md)
 
-- [T3] **A2–A3 package skeleton + sync CLI**: `package.json` (`@wbniv/bsnes-jg-player`, GPL-3.0-only),
-  committed `dist/engine` + demo, `bin/sync.mjs` (`sync` / `--demo` / `--check` / `version`),
-  `scripts/stage-dist.sh`.
-- [T3] **A4 SnesPlayer.astro + integration.mjs + embed/{snippet.html,player.css}** with boot-contract
-  docs in README.
-- [T2] **A5 CI + publish workflows** (`ci.yml` rebuild⇄diff reproducibility gate + headless selfcheck,
-  `publish.yml` npm provenance on `v*` tag) + `task package` / `task publish-dry`.
+- [T1] **First publish (manual prereq)**: create the npm account owning `@wbniv`, mint a granular
+  automation token for this package, add repo secret `NPM_TOKEN`, then `git tag v1.0.0 && git push --tags`.
+- [T2] **[verify T2] CI green on GitHub**: push the branch, confirm the reproducibility gate passes
+  (first real cross-machine test of emcc 6.0.1 determinism — if it fails, restage dist/ per ci.yml note).
 - [T3] **Phase C — indri.studio adoption**: install package; replace `scripts/sync-llvm-mos-emulator.sh`
   with the sync CLI; `EmulatorEmbed.astro` → `<SnesPlayer playBase="/apps/llvm-mos-65816/play">`;
   Base.astro boot logic removed; indri inherits poster clear-to-black (intentional; flag it).
@@ -48,6 +45,9 @@ _Nothing parked._
 
 ## Done
 
+- [x] 2026-07-27 — [npm-package] A5: CI (repro+fidelity+sync gates) + publish.yml + Taskfile tasks; ?verify=1 headless hook. See [plan](docs/plans/2026-07-27-npm-player-package.md).
+- [x] 2026-07-27 — [npm-package] A4: SnesPlayer.astro + integration + embed snippet/css + README boot contract. See [plan](docs/plans/2026-07-27-npm-player-package.md).
+- [x] 2026-07-27 — [npm-package] A2–A3: package.json + committed dist/ + bin/sync.mjs (sync/--demo/--check). See [plan](docs/plans/2026-07-27-npm-player-package.md).
 - [x] 2026-07-27 — [npm-package] A1: merged the 3 drifted app.js copies (kept adaptive yoff, manifest touchNav). See [plan](docs/plans/2026-07-27-npm-player-package.md).
 - [x] **Mode 7 Mandelbrot, on-SNES + progressive** (2026-06-26): `mandel-display` rewritten to render
   in Mode 7 — 64×56 per-pixel bitmap computed on the 65816, revealed coarse→fine via **vblank DMA**
