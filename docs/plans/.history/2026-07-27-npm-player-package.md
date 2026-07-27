@@ -1,8 +1,14 @@
 | Date | Change |
 |------|--------|
+| [2026-07-27](https://github.com/wbniv/bsnes-jg-wasm/commit/6edc1c3) | ci: reproducibility gate is functional, not bitwise |
 | [2026-07-27](https://github.com/wbniv/bsnes-jg-wasm/commit/85462bc) | app.js: merge the three drifted copies into one canonical player |
 
 <!--history-meta v1
+6edc1c3	author	Will Norris
+6edc1c3	added	2
+6edc1c3	deleted	1
+6edc1c3	files	1
+6edc1c3	body	Disproved bitwise wasm reproducibility across hosts: emcc 6.0.1 from\nidentical pinned inputs (tarball sha256, EMSDK_VERSION, unchanged build.sh)\nproduces byte-different wasm locally vs on the GH runner — the two rebuilds\ndiverge from each other at the same structural byte (a stack/global\ninitializer), so this is host-dependent codegen/layout, not input drift.\n\nNew gate: JS glue (ABI) + app.js byte-identical, wasm size within 1%, and\nthe differential gate's WRAM CRC must PASS on BOTH the rebuilt core and the\ncommitted dist engine. publish.yml verifies the CRC on the committed engine\n(what npm actually ships).\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_011DEG8ouwAWtqeWtcvZSysz
 85462bc	author	Will Norris
 85462bc	added	160
 85462bc	deleted	0

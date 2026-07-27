@@ -70,3 +70,13 @@ _Nothing parked._
 - [x] Scaffolded the repo (2026-06-25): reproducible `build.sh`, loader page, `serve.py`,
   `sync-roms.sh`, `Taskfile.yml`, GPLv3 `LICENSE`+`NOTICE`, bundled demo ROMs, the plan.
 
+
+
+## Inbox — auto-captured plan deferrals
+
+_Auto-added from plan "Out of scope"/"Deferred" sections at commit time. Triage each into M1/M2/etc. and delete it here — it will not come back._
+
+<!-- BEGIN auto-captured-deferrals (managed by audit-plan-deferrals.sh — triage these into the curated sections above; the fingerprint ledger means a deleted item is NOT re-added) -->
+- [ ] **(triage)** **indri.studio** *(landed, v0.1.120)*: package installed; `scripts/sync-llvm-mos-emulator.sh` became a thin wrapper over the sync CLI; `sync --check` drift gate in deploy.yml. **DEVIATION:** indri **keeps its own embed markup + Base.astro boot** — they're already centralized and carry the site's glass-card/lime branding; `<SnesPlayer/>` would have swapped that for generic chrome with zero dedup gain. The boot contract is unchanged, so indri's markup drives the packaged engine as-is. It does inherit poster clear-to-black + manifest touchNav + the yoff decision (intentional). — _from [2026-07-27-npm-player-package.md](docs/plans/2026-07-27-npm-player-package.md)_  <!-- fp:89842f5381bb978e -->
+- [ ] **(triage)** **snes-rom-page skill** *(landed, v2.0.0)*: vendored `engine/` + `page-template.astro` deleted (4 MB → 28 KB); scaffold.sh syncs the engine from the site's installed package, gains `--playdir` and `--touchnav`, and the biohack content step is "write `src/content/snes/<slug>.json`" (JSON, not MDX — matching the B deviation); snes-demos.ts append dropped; SKILL.md rewritten for both sites' as-built layouts. — _from [2026-07-27-npm-player-package.md](docs/plans/2026-07-27-npm-player-package.md)_  <!-- fp:0356701e673f05f4 -->
+<!-- END auto-captured-deferrals -->
