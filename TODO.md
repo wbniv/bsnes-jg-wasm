@@ -6,21 +6,21 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 ### Accurate mode — remaining
 
-- [ ] **Perf on a phone.** Laptop is ~82 fps raw (>60 with headroom); Asyncify adds overhead, so
+- [T3] **Perf on a phone.** Laptop is ~82 fps raw (>60 with headroom); Asyncify adds overhead, so
   measure a real low-end phone for the zoom/Mode-7 demos before claiming mobile.
-- [ ] **Firefox spot-check.** End-to-end is verified in Chromium; load the page once in current
+- [T2] **Firefox spot-check.** End-to-end is verified in Chromium; load the page once in current
   Firefox (single-thread, no COOP/COEP) to confirm before deploy. (Plan step 4.)
 
 ### Polish
 
-- [ ] Optional: trim Asyncify cost (size/speed) with an `ASYNCIFY_ONLY`/`ADD` list once the core's
+- [T3] Optional: trim Asyncify cost (size/speed) with an `ASYNCIFY_ONLY`/`ADD` list once the core's
   swap-reachable call set is profiled — only if mobile perf needs it.
-- [ ] Wire self-checks for the other demos (zoom/mode7/interactive) — needs their scripted-input
+- [T2] Wire self-checks for the other demos (zoom/mode7/interactive) — needs their scripted-input
   gates (see `dev/mandel-interactive.sh`), not just a boot-time WRAM read.
 
 ### Later (separate)
 
-- [ ] **Showroom** — a demo-reel page consuming this core (curated `+mos-a16` productions). Its own
+- [T3] **Showroom** — a demo-reel page consuming this core (curated `+mos-a16` productions). Its own
   effort; this repo just provides the `.wasm`.
 
 ## Done
