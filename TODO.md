@@ -20,9 +20,6 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 ### npm package — [plan](docs/plans/2026-07-27-npm-player-package.md)
 
-- [wip T4] **A1 merge the three app.js copies** (biohack base + upstream `yoff` delta behind a
-  visual gate; generalise lzss chevron to a manifest flag). T4: the merge is a design call, the
-  yoff gate needs judgment + Will's sign-off.
 - [T3] **A2–A3 package skeleton + sync CLI**: `package.json` (`@wbniv/bsnes-jg-player`, GPL-3.0-only),
   committed `dist/engine` + demo, `bin/sync.mjs` (`sync` / `--demo` / `--check` / `version`),
   `scripts/stage-dist.sh`.
@@ -30,6 +27,11 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
   docs in README.
 - [T2] **A5 CI + publish workflows** (`ci.yml` rebuild⇄diff reproducibility gate + headless selfcheck,
   `publish.yml` npm provenance on `v*` tag) + `task package` / `task publish-dry`.
+- [T3] **Phase C — indri.studio adoption**: install package; replace `scripts/sync-llvm-mos-emulator.sh`
+  with the sync CLI; `EmulatorEmbed.astro` → `<SnesPlayer playBase="/apps/llvm-mos-65816/play">`;
+  Base.astro boot logic removed; indri inherits poster clear-to-black (intentional; flag it).
+- [T2] **Phase C — snes-rom-page skill**: delete vendored `engine/`; scaffold.sh → ROM+preview copy,
+  manifest entry, `src/content/snes/<slug>.mdx` stub; drop snes-demos.ts append; update SKILL.md.
 
 ### Later (separate)
 
@@ -46,6 +48,7 @@ _Nothing parked._
 
 ## Done
 
+- [x] 2026-07-27 — [npm-package] A1: merged the 3 drifted app.js copies (kept adaptive yoff, manifest touchNav). See [plan](docs/plans/2026-07-27-npm-player-package.md).
 - [x] **Mode 7 Mandelbrot, on-SNES + progressive** (2026-06-26): `mandel-display` rewritten to render
   in Mode 7 — 64×56 per-pixel bitmap computed on the 65816, revealed coarse→fine via **vblank DMA**
   (no force-blank flash), then a hardware affine **rotate+zoom**. CRC `0x204F` @ WRAM `$0400`/5200 fr.
@@ -71,12 +74,3 @@ _Nothing parked._
 - [x] Scaffolded the repo (2026-06-25): reproducible `build.sh`, loader page, `serve.py`,
   `sync-roms.sh`, `Taskfile.yml`, GPLv3 `LICENSE`+`NOTICE`, bundled demo ROMs, the plan.
 
-
-## Inbox — auto-captured plan deferrals
-
-_Auto-added from plan "Out of scope"/"Deferred" sections at commit time. Triage each into M1/M2/etc. and delete it here — it will not come back._
-
-<!-- BEGIN auto-captured-deferrals (managed by audit-plan-deferrals.sh — triage these into the curated sections above; the fingerprint ledger means a deleted item is NOT re-added) -->
-- [ ] **(triage)** **indri.studio:** install package; replace `scripts/sync-llvm-mos-emulator.sh` with the sync CLI; `EmulatorEmbed.astro` → `<SnesPlayer playBase="/apps/llvm-mos-65816/play">`; Base.astro boot logic removed. indri inherits poster clear-to-black (intentional; flag it). — _from [2026-07-27-npm-player-package.md](docs/plans/2026-07-27-npm-player-package.md)_  <!-- fp:36c194bfa394d964 -->
-- [ ] **(triage)** **snes-rom-page skill:** delete vendored `engine/`; scaffold.sh → copies ROM+preview, appends manifest entry, creates `src/content/snes/<slug>.mdx` stub; drop snes-demos.ts append; update SKILL.md. — _from [2026-07-27-npm-player-package.md](docs/plans/2026-07-27-npm-player-package.md)_  <!-- fp:a3bb85ea5a540b01 -->
-<!-- END auto-captured-deferrals -->
