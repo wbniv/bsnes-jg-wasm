@@ -35,6 +35,21 @@ tasks:
     cmds:
       - ./sync-roms.sh
 
+  package:
+    desc: "Stage web/ artifacts into dist/ (the committed npm payload) — run after build"
+    cmds:
+      - bash scripts/stage-dist.sh
+
+  publish-dry:
+    desc: "npm pack --dry-run: show exactly what a publish would ship"
+    cmds:
+      - npm pack --dry-run
+
+  sync-smoke:
+    desc: "Smoke-test the sync CLI (sync --demo, --check, tamper detection)"
+    cmds:
+      - npm test
+
   clean:
     desc: "Remove built core artifacts (keeps emsdk + vendored core clone)"
     cmds:

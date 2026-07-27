@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [master, npm-package]
+  pull_request:
+
+jobs:
+  verify:
+    name: reproduce core + fidelity gate + sync smoke
+    runs-on: ubuntu-latest
+    env:
+      # Pin to the emcc that built the committed dist/ (see dist/engine/cores/PROVENANCE.json).
+      EMSDK_VERSION: 6.0.1
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Cache emsdk + vendored core source
+        uses: actions/cache@v5
+        with:
+          path: |
+            emsdk
+            vendor
+          key: emsdk-${{ env.EMSDK_VERSION }}-${{ hashFiles('build.sh') }}
+
+      - name: Build the wasm core from source
+        run: ./build.sh
+
+      - name: "Reproducibility gate: built core == committed dist/engine"
+        # PROVENANCE.json carries a build timestamp, so only the artifacts are compared.
+        # If this ever fails on an emsdk bump, rebuild + restage dist/ in the same PR —
+        # the committed payload must always be reproducible from the pinned inputs.
+        run: |
+          set -euo pipefail
+          cmp web/cores/bsnes_jg.wasm dist/engine/cores/bsnes_jg.wasm
+          cmp web/cores/bsnes_jg.js   dist/engine/cores/bsnes_jg.js
+          cmp web/app.js              dist/engine/app.js
+          echo "core + app.js reproduce the committed dist/ byte-for-byte"
+
+      - name: "Fidelity gate: headless self-check == gate WRAM assert"
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8000 --directory web >/dev/null 2>&1 &
+          sleep 1
+          DOM=$(google-chrome --headless=new --disable-gpu --no-sandbox \
+            --virtual-time-budget=120000 --dump-dom \
+            "http://localhost:8000/?rom=mandel-display&verify=1" 2>/dev/null)
+          echo "$DOM" | grep -o 'id="checkresult"[^<]*<\?[^<]*' | head -1
+          echo "$DOM" | grep -q 'badge pass' || { echo "fidelity self-check did not PASS"; exit 1; }
+
+      - name: "Sync CLI smoke: sync --demo, then --check, then tamper must fail"
+        run: |
+          set -euo pipefail
+          node bin/sync.mjs sync /tmp/smoke --demo
+          node bin/sync.mjs sync --check /tmp/smoke
+          echo tamper >> /tmp/smoke/app.js
+          if node bin/sync.mjs sync --check /tmp/smoke; then
+            echo "tampered engine passed --check"; exit 1
+          fi
+          echo "sync CLI OK (drift correctly detected)"
+
+      - name: npm pack sanity
+        run: npm pack --dry-run

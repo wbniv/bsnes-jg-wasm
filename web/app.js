@@ -183,6 +183,12 @@
         status(runLabel);
         startLoop();
         updateCheckButton(id);
+        // ?verify=1 auto-runs the fidelity self-check once the ROM is up — the
+        // hook CI's headless gate drives (poll #checkresult for PASS/MISMATCH).
+        if (new URLSearchParams(location.search).get("verify") === "1" && !window.__bjgAutoVerified) {
+          window.__bjgAutoVerified = true;
+          setTimeout(verify, 0);
+        }
       })
       .catch(function (e) { status("error: " + e.message); });
   }

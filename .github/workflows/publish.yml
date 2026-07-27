@@ -1,0 +1,60 @@
+name: Publish
+
+# npm publish on a v* tag, after the same gates CI runs.
+# One-time manual prereq (documented in docs/plans/2026-07-27-npm-player-package.md):
+# create the npm account owning the @wbniv scope, mint a granular automation token
+# limited to this package, and store it as the NPM_TOKEN repo secret.
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # npm --provenance
+    env:
+      EMSDK_VERSION: 6.0.1
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Cache emsdk + vendored core source
+        uses: actions/cache@v5
+        with:
+          path: |
+            emsdk
+            vendor
+          key: emsdk-${{ env.EMSDK_VERSION }}-${{ hashFiles('build.sh') }}
+
+      - name: Rebuild + verify committed dist/ (same gates as CI)
+        run: |
+          set -euo pipefail
+          ./build.sh
+          cmp web/cores/bsnes_jg.wasm dist/engine/cores/bsnes_jg.wasm
+          cmp web/cores/bsnes_jg.js   dist/engine/cores/bsnes_jg.js
+          cmp web/app.js              dist/engine/app.js
+          python3 -m http.server 8000 --directory web >/dev/null 2>&1 &
+          sleep 1
+          google-chrome --headless=new --disable-gpu --no-sandbox \
+            --virtual-time-budget=120000 --dump-dom \
+            "http://localhost:8000/?rom=mandel-display&verify=1" 2>/dev/null \
+            | grep -q 'badge pass'
+
+      - name: "Tag == package.json version"
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./package.json').version")
+          [ "$TAG" = "$PKG" ] || { echo "tag v$TAG != package.json $PKG"; exit 1; }
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Publish
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
