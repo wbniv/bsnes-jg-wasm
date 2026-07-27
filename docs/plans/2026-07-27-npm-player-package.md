@@ -142,7 +142,8 @@ Fidelity check for B3: build before/after, diff rendered `dist/snes/<slug>/index
 - **yoff** — one line, gated by explicit screenshots + Will's call.
 - **41 selfcheck overrides** — pre-delete comparison de-risks silent verify-behaviour changes.
 - **Prose extraction** — notes-array pattern is mostly data-transform; rendered-HTML diff catches the rest; ~5 manual pages budgeted.
-- **Headless ASYNCIFY wasm in CI** — fallback criterion in A5.
+- **Headless ASYNCIFY wasm in CI** — fallback criterion in A5. *(Resolved 2026-07-27: `?verify=1` auto-check under `--virtual-time-budget` PASSes reliably.)*
+- **Bitwise wasm reproducibility** — *disproved 2026-07-27*: emcc 6.0.1 from identical pinned inputs produces byte-different wasm on different hosts (local vs GH runner diverge from each other at the same structural byte — a stack/global initializer; ~3.3 M bytes shift downstream). The CI gate is therefore **functional**: JS glue (ABI) byte-identical + app.js byte-identical + wasm size within 1% + the differential-gate WRAM CRC PASSing on both the rebuilt and the committed core.
 - **npm scope** — confirm `@wbniv` availability.
 
 ## Verification

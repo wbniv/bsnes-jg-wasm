@@ -28,14 +28,17 @@ jobs:
             vendor
           key: emsdk-${{ env.EMSDK_VERSION }}-${{ hashFiles('build.sh') }}
 
-      - name: Rebuild + verify committed dist/ (same gates as CI)
+      - name: Rebuild + verify committed dist/ (same gates as CI — functional, see ci.yml)
         run: |
           set -euo pipefail
           ./build.sh
-          cmp web/cores/bsnes_jg.wasm dist/engine/cores/bsnes_jg.wasm
-          cmp web/cores/bsnes_jg.js   dist/engine/cores/bsnes_jg.js
-          cmp web/app.js              dist/engine/app.js
-          python3 -m http.server 8000 --directory web >/dev/null 2>&1 &
+          cmp web/cores/bsnes_jg.js dist/engine/cores/bsnes_jg.js
+          cmp web/app.js            dist/engine/app.js
+          # fidelity CRC on the COMMITTED engine (what npm ships)
+          rm -rf /tmp/dist-harness && cp -r web /tmp/dist-harness
+          cp dist/engine/app.js /tmp/dist-harness/app.js
+          cp dist/engine/cores/* /tmp/dist-harness/cores/
+          python3 -m http.server 8000 --directory /tmp/dist-harness >/dev/null 2>&1 &
           sleep 1
           google-chrome --headless=new --disable-gpu --no-sandbox \
             --virtual-time-budget=120000 --dump-dom \
