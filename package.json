@@ -1,0 +1,47 @@
+{
+  "name": "@wbniv/bsnes-jg-player",
+  "version": "1.0.0",
+  "description": "In-browser SNES player: a reproducible Emscripten build of bsnes-jg 2.1.0 (no libretro, no EmulatorJS) with a canvas front-end, keyboard pad, fullscreen, manifest-driven touch nav, and an in-page fidelity self-check. Ships a sync CLI, a framework-agnostic embed, and an Astro component.",
+  "keywords": ["snes", "emulator", "bsnes", "wasm", "webassembly", "astro"],
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wbniv/bsnes-jg-wasm.git"
+  },
+  "author": "Will Norris",
+  "bin": {
+    "bsnes-jg-player": "bin/sync.mjs"
+  },
+  "files": [
+    "dist",
+    "astro",
+    "embed",
+    "bin",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./astro/index.ts",
+    "./SnesPlayer.astro": "./astro/SnesPlayer.astro",
+    "./integration": "./astro/integration.mjs",
+    "./css": "./embed/player.css",
+    "./engine/*": "./dist/engine/*"
+  },
+  "scripts": {
+    "stage-dist": "bash scripts/stage-dist.sh",
+    "test": "node bin/sync.mjs sync /tmp/bsnes-jg-player-smoke --demo && node bin/sync.mjs sync --check /tmp/bsnes-jg-player-smoke && rm -rf /tmp/bsnes-jg-player-smoke"
+  },
+  "peerDependencies": {
+    "astro": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "astro": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
