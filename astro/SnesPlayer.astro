@@ -24,11 +24,13 @@ interface Props {
   playBase?: string;
   /** Show the fullscreen button (default true). */
   fullscreen?: boolean;
+  /** Label for the self-check button (default "Verify fidelity"). */
+  verifyLabel?: string;
   /** Extra class(es) on the wrapper. */
   class?: string;
 }
 
-const { slug, title = slug, keys, playBase = '/play', fullscreen = true, class: klass } = Astro.props;
+const { slug, title = slug, keys, playBase = '/play', fullscreen = true, verifyLabel = 'Verify fidelity', class: klass } = Astro.props;
 
 const base = playBase.endsWith('/') ? playBase : playBase + '/';
 const PLAY = 'public' + (base.startsWith('/') ? base : '/' + base);
@@ -48,7 +50,7 @@ const appV = bust['app.js'] ?? '';
   <div class="rp-row">
     <span id="status" class="rp-status">loading core…</span>
     <span id="checkresult" class="rp-badge"></span>
-    <button id="verify" class="rp-btn" disabled>Verify fidelity</button>
+    <button id="verify" class="rp-btn" disabled>{verifyLabel}</button>
     {fullscreen && <button id="fullscreen" class="rp-btn">Fullscreen</button>}
   </div>
   {keys && <p class="rp-keys" set:html={keys} />}
