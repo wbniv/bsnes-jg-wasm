@@ -36,6 +36,7 @@
   .badge.running { color:var(--warn); }
   .badge.pass { color:#0c1116; background:var(--pass); font-weight:600; }
   .badge.fail { color:#0c1116; background:var(--fail); font-weight:600; }
+  .badge.warn { color:#0c1116; background:var(--warn); font-weight:600; }
   .banner { margin-top:14px; padding:10px 12px; border-radius:6px; font-size:12.5px;
             background:#171a23; border:1px solid var(--line); color:var(--dim); }
   .banner.warn { border-color:var(--warn); color:var(--fg); }
@@ -62,6 +63,7 @@
     <button data-rom="mandel-zoom">Mandelbrot zoom</button>
     <button data-rom="mandel-mode7">Mode-7</button>
     <button data-rom="mandel-interactive">Interactive</button>
+    <button data-rom="lzss-gallery">Gallery</button>
     <label class="file">Load .sfc… <input id="file" type="file" accept=".sfc,.smc"></label>
     <button id="verify" disabled>Verify fidelity</button>
   </nav>

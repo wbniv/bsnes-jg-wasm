@@ -23,6 +23,22 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 - [T1] **First publish (manual prereq)**: create the npm account owning `@wbniv`, mint a granular
   automation token for this package, add repo secret `NPM_TOKEN`, then `git tag v1.0.0 && git push --tags`.
 
+### live-record mode — [spec](../llvm-mos-65816/docs/plans/2026-07-28-gallery-per-image-selfcheck.md)
+
+- [T1] **Release + resync** (user-gated, not yet authorized): version bump, `npm publish`, then
+  `npx bsnes-jg-player sync` on biohack.net + indri.studio so their manifests can switch the
+  gallery's selfcheck to `mode: "live-record"` (currently pinned to the legacy work-0 fallback).
+- [T2] **Re-verify the retarget-once "stop" case** (2nd navigation mid-poll → fail badge) in a less
+  resource-contended browser session — reproduced only the 1st retarget live (work 0→1, counter
+  reset, correct title); the 2nd attempt kept losing its headless Chrome target to what looked like
+  host memory pressure (multiple concurrent wasm/Chrome sessions on a shared box), not an app.js
+  defect — the code path is the same branch already proven for the 1st retarget, gated only by a
+  trivial `retargets > 1` counter.
+- [T1] **Wire `lzss-gallery` into `sync-roms.sh`'s default ROMS list** once
+  `feature/verify-fidelity-button` merges to `llvm-mos-65816` main — deliberately left out for now
+  (see code comment) since a default sync from `main` today would overwrite the demo with a ROM
+  that lacks the `gallery_shown` record.
+
 ### Later (separate)
 
 - [T3] **Showroom** — a demo-reel page consuming this core (curated `+mos-a16` productions). Its own
@@ -38,6 +54,8 @@ _Nothing parked._
 
 ## Done
 
+- [x] 2026-07-31 — [live-record] `mode: "live-record"` implemented in `verify()` (no power-cycle,
+  polls the running machine); browser-verified pass/mismatch/warn + 1st-of-2 retarget. See TODO Open.
 - [x] 2026-07-27 — [npm-package] Phase C: indri adopts the package (kept own embed markup, deliberate); snes-rom-page skill v2 (no vendored engine).
 - [x] 2026-07-27 — [npm-package] Phase B: biohack.net migrated + deployed (v1.0.307); prod selfcheck PASS. See [plan](docs/plans/2026-07-27-npm-player-package.md).
 - [x] 2026-07-27 — [npm-package] CI green on GH ([run 30303535793](https://github.com/wbniv/bsnes-jg-wasm/actions/runs/30303535793)): functional gate (bitwise repro disproved cross-host; glue+CRC gate instead).
