@@ -308,6 +308,7 @@
   function playFile(file) {
     current = null;
     stopLoop();
+    resetTelemetry();
     if (checkEl) { checkEl.textContent = ""; checkEl.className = "badge"; }
     document.querySelectorAll("#picker button[data-rom]").forEach(function (b) {
       b.removeAttribute("aria-current");
