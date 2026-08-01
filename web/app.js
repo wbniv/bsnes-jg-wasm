@@ -57,8 +57,115 @@
   var statusEl = document.getElementById("status");
   var checkEl = document.getElementById("checkresult");
   var bannerEl = document.getElementById("banner");
+  var telemetryEl = document.getElementById("telemetry");
+  var telemetryTimeEl = document.getElementById("telemetry-time");
+  var telemetryFpsEl = document.getElementById("telemetry-fps");
+  var telemetryHealthEl = document.getElementById("telemetry-health");
+  var telemetrySample = null;
+
+  function ensureTelemetryElements() {
+    if (telemetryEl || !statusEl || !statusEl.parentNode) return;
+    telemetryEl = document.createElement("span");
+    telemetryEl.id = "telemetry";
+    telemetryEl.className = "rp-telemetry";
+    telemetryEl.hidden = true;
+    telemetryEl.setAttribute("aria-label", "Video playback telemetry");
+    function field(label, id, value) {
+      var span = document.createElement("span");
+      span.appendChild(document.createTextNode(label + " "));
+      var strong = document.createElement("strong");
+      strong.id = id;
+      strong.textContent = value;
+      span.appendChild(strong);
+      telemetryEl.appendChild(span);
+      return strong;
+    }
+    telemetryTimeEl = field("TIME", "telemetry-time", "00:00");
+    telemetryFpsEl = field("FPS", "telemetry-fps", "—");
+    telemetryHealthEl = document.createElement("span");
+    telemetryHealthEl.id = "telemetry-health";
+    telemetryHealthEl.className = "rp-telemetry-health";
+    telemetryEl.appendChild(telemetryHealthEl);
+    statusEl.parentNode.insertBefore(telemetryEl, statusEl.nextSibling);
+  }
+
+  ensureTelemetryElements();
 
   function status(msg) { if (statusEl) statusEl.textContent = msg; }
+
+  function pad2(value) { return value < 10 ? "0" + value : String(value); }
+
+  function formatMediaTime(presented, nominalFps) {
+    var seconds = Math.floor(presented / nominalFps);
+    var minutes = Math.floor(seconds / 60);
+    if (minutes > 99) return "99:59+";
+    return pad2(minutes) + ":" + pad2(seconds % 60);
+  }
+
+  function readWramUnsigned(off, len) {
+    var base = Module._bjg_wram() >>> 0;
+    var bytes = Module.HEAPU8;
+    var value = 0;
+    for (var i = 0; i < len; i++) value += bytes[base + off + i] * Math.pow(256, i);
+    return value >>> 0;
+  }
+
+  function telemetryMeta() {
+    var meta = romMeta(current);
+    return meta && meta.telemetry ? meta.telemetry : null;
+  }
+
+  function resetTelemetry() {
+    telemetrySample = null;
+    if (telemetryTimeEl) telemetryTimeEl.textContent = "00:00";
+    if (telemetryFpsEl) telemetryFpsEl.textContent = "—";
+    if (telemetryHealthEl) telemetryHealthEl.textContent = "";
+    if (telemetryEl) telemetryEl.hidden = !telemetryMeta();
+  }
+
+  function updateTelemetry() {
+    var tm = telemetryMeta();
+    if (!tm || !Module || !Module._bjg_loaded || !Module._bjg_loaded()) return;
+    if (telemetryEl) telemetryEl.hidden = false;
+    var presented = readWramUnsigned(Number(tm.presented.off), tm.presented.len);
+    var vblanks = readWramUnsigned(Number(tm.vblanks.off), tm.vblanks.len);
+    var slips = tm.deadlineSlips ? readWramUnsigned(Number(tm.deadlineSlips.off), tm.deadlineSlips.len) : 0;
+    var result = tm.result ? readWramUnsigned(Number(tm.result.off), tm.result.len) : 0;
+    var nominal = Number(tm.nominalFps) || 30;
+    var hz = Number(tm.vblankHz) || 60.0988;
+    var windowFrames = Number(tm.windowVblanks) || 60;
+    if (telemetryEl) {
+      telemetryEl.dataset.presented = String(presented);
+      telemetryEl.dataset.vblanks = String(vblanks);
+    }
+    if (telemetryTimeEl) telemetryTimeEl.textContent = formatMediaTime(presented, nominal);
+    if (!telemetrySample || presented < telemetrySample.presented || vblanks < telemetrySample.vblanks)
+      telemetrySample = { presented: presented, vblanks: vblanks };
+    if (telemetrySample.presented === 0 && presented > 0) {
+      telemetrySample = { presented: presented, vblanks: vblanks };
+      if (telemetryFpsEl) telemetryFpsEl.textContent = "—";
+    }
+    var deltaVblanks = (vblanks - telemetrySample.vblanks) >>> 0;
+    if (deltaVblanks >= windowFrames) {
+      var deltaPresented = (presented - telemetrySample.presented) >>> 0;
+      if (telemetryEl) {
+        telemetryEl.dataset.deltaPresented = String(deltaPresented);
+        telemetryEl.dataset.deltaVblanks = String(deltaVblanks);
+      }
+      if (telemetryFpsEl) telemetryFpsEl.textContent = (deltaPresented * hz / deltaVblanks).toFixed(1);
+      telemetrySample = { presented: presented, vblanks: vblanks };
+    }
+    if (telemetryHealthEl) {
+      if (result !== 0 && result !== 0xff) telemetryHealthEl.textContent = "ERROR " + result;
+      else if (slips) telemetryHealthEl.textContent = slips + (slips === 1 ? " SLIP" : " SLIPS");
+      else telemetryHealthEl.textContent = "";
+    }
+  }
+
+  function pauseTelemetry() {
+    if (telemetryEl && !telemetryEl.hidden && telemetryFpsEl && telemetrySample)
+      telemetryFpsEl.textContent = "PAUSED";
+  }
 
   // --- core module loading ---------------------------------------------------
 
@@ -134,18 +241,21 @@
     Module._bjg_set_input(0, pad);
     Module._bjg_run();
     present();
+    updateTelemetry();
     rafId = requestAnimationFrame(frame);
   }
 
   function startLoop() {
     if (running) return;
     running = true;
+    if (telemetryFpsEl && telemetrySample) telemetryFpsEl.textContent = "—";
     rafId = requestAnimationFrame(frame);
   }
   function stopLoop() {
     running = false;
     if (rafId) cancelAnimationFrame(rafId);
     rafId = 0;
+    pauseTelemetry();
   }
 
   // --- ROM loading -----------------------------------------------------------
@@ -174,12 +284,14 @@
     stopLoop();
     if (checkEl) { checkEl.textContent = ""; checkEl.className = "badge"; }
     markActive(id);
+    resetTelemetry();
     status("loading " + id + ".sfc…");
     return fetch(bust("roms/" + id + ".sfc"))
       .then(function (r) { if (!r.ok) throw new Error("fetch " + id); return r.arrayBuffer(); })
       .then(function (buf) {
         if (!loadRomBytes(new Uint8Array(buf))) throw new Error("core rejected ROM");
         runLabel = "running " + id + ".sfc"; dimsShown = false;
+        resetTelemetry();
         status(runLabel);
         startLoop();
         updateCheckButton(id);
@@ -196,6 +308,7 @@
   function playFile(file) {
     current = null;
     stopLoop();
+    resetTelemetry();
     if (checkEl) { checkEl.textContent = ""; checkEl.className = "badge"; }
     document.querySelectorAll("#picker button[data-rom]").forEach(function (b) {
       b.removeAttribute("aria-current");

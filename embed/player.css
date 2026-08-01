@@ -11,6 +11,11 @@
 .rp-screen canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; }
 .rp-row { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; margin-top: .85rem;
           font: 12px/1.4 ui-monospace, monospace; opacity: .8; }
+.rp-status { flex: 1 1 190px; }
+.rp-telemetry { display: inline-flex; gap: .75rem; white-space: nowrap;
+                font-variant-numeric: tabular-nums; opacity: 1; }
+.rp-telemetry strong { color: var(--rp-accent); font-weight: 650; }
+.rp-telemetry-health { color: #ff6b6b; font-weight: 650; }
 .rp-btn { margin-left: auto; background: transparent; color: inherit; cursor: pointer; font-size: 12px;
           border: 1px solid color-mix(in srgb, var(--rp-accent) 45%, transparent);
           border-radius: 8px; padding: .4rem .85rem; transition: border-color .15s, color .15s; }
@@ -25,3 +30,7 @@
 .rp-keys b { opacity: 1; font-weight: 600; }
 .rp-hint { margin: .5rem 0 0; font-size: 12px; opacity: .6; }
 .rp-banner { margin: .6rem 0 0; font-size: 12px; opacity: .75; }
+@media (max-width: 480px) {
+  .rp-status { flex-basis: 100%; }
+  .rp-telemetry { order: 2; }
+}
