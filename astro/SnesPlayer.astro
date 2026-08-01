@@ -49,11 +49,6 @@ const appV = bust['app.js'] ?? '';
   <div class="rp-screen"><canvas id="screen" width="256" height="224" aria-label="SNES screen"></canvas></div>
   <div class="rp-row">
     <span id="status" class="rp-status">loading core…</span>
-    <span id="telemetry" class="rp-telemetry" hidden aria-label="Video playback telemetry">
-      <span>TIME <strong id="telemetry-time">00:00</strong></span>
-      <span>FPS <strong id="telemetry-fps">—</strong></span>
-      <span id="telemetry-health" class="rp-telemetry-health"></span>
-    </span>
     <span id="checkresult" class="rp-badge"></span>
     <button id="verify" class="rp-btn" disabled>{verifyLabel}</button>
     {fullscreen && <button id="fullscreen" class="rp-btn">Fullscreen</button>}
