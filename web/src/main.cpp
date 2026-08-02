@@ -90,6 +90,12 @@ int bjg_load(const uint8_t* rom, int len) {
   Bsnes::setVideoSpec({vbuf, nullptr, &videoFrame});
 
   if(!Bsnes::load()) return 0;
+  // Attach pads before power so the first automatic joypad latch has a live
+  // device and callback. Reattach after power as well: this is harmless for
+  // bsnes-jg and keeps the frontend robust if core initialization reconnects
+  // either controller port while powering the machine.
+  Bsnes::setInputSpec({0, Bsnes::Input::Device::Gamepad, nullptr, pollInput});
+  Bsnes::setInputSpec({1, Bsnes::Input::Device::Gamepad, nullptr, pollInput});
   Bsnes::power();
   Bsnes::setInputSpec({0, Bsnes::Input::Device::Gamepad, nullptr, pollInput});
   Bsnes::setInputSpec({1, Bsnes::Input::Device::Gamepad, nullptr, pollInput});
