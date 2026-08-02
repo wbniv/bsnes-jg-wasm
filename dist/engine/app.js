@@ -44,6 +44,8 @@
   var manifest = null;     // roms/manifest.json
   var current = null;      // current rom id
   var pad = 0;             // port-0 button mask
+  var touchRelease = 0;    // timer for a manifest-driven synthetic D-pad tap
+  var touchNavPressed = 0; // synthetic bit currently owned by that timer
   var running = false;     // RAF loop active
   var rafId = 0;
   var imageData = null;
@@ -59,6 +61,13 @@
   var bannerEl = document.getElementById("banner");
 
   function status(msg) { if (statusEl) statusEl.textContent = msg; }
+
+  function clearTouchNav() {
+    clearTimeout(touchRelease);
+    touchRelease = 0;
+    if (touchNavPressed) pad &= ~touchNavPressed;
+    touchNavPressed = 0;
+  }
 
   // --- core module loading ---------------------------------------------------
 
@@ -498,14 +507,6 @@
       if (hit(tn.left)) return JOY.Left;
       if (hit(tn.right)) return JOY.Right;
       return 0;
-    }
-    var touchRelease = 0;
-    var touchNavPressed = 0;
-    function clearTouchNav() {
-      clearTimeout(touchRelease);
-      touchRelease = 0;
-      if (touchNavPressed) pad &= ~touchNavPressed;
-      touchNavPressed = 0;
     }
     canvas.addEventListener("pointerdown", function (e) {
       var tn = touchNavBits();
