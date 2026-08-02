@@ -146,6 +146,7 @@
     running = false;
     if (rafId) cancelAnimationFrame(rafId);
     rafId = 0;
+    clearTouchNav();
   }
 
   // --- ROM loading -----------------------------------------------------------
@@ -499,6 +500,13 @@
       return 0;
     }
     var touchRelease = 0;
+    var touchNavPressed = 0;
+    function clearTouchNav() {
+      clearTimeout(touchRelease);
+      touchRelease = 0;
+      if (touchNavPressed) pad &= ~touchNavPressed;
+      touchNavPressed = 0;
+    }
     canvas.addEventListener("pointerdown", function (e) {
       var tn = touchNavBits();
       if (!tn) return;
@@ -509,16 +517,15 @@
       var bit = touchNavBitAt(tn, x, y);
       if (!bit) return;
       e.preventDefault();
+      clearTouchNav();
+      touchNavPressed = bit;
       pad |= bit;
-      clearTimeout(touchRelease);
-      touchRelease = setTimeout(function () { pad &= ~bit; }, 120);
+      touchRelease = setTimeout(clearTouchNav, 120);
     }, { passive: false });
-    ["pointerup", "pointercancel"].forEach(function (name) {
-      canvas.addEventListener(name, function () {
-        if (!touchNavBits()) return;
-        pad &= ~(JOY.Left | JOY.Right);
-      });
-    });
+    /* Do not clear on pointerup: a quick click can otherwise begin and end
+       between emulated input samples.  An accepted tap is a full 120 ms pulse. */
+    canvas.addEventListener("pointercancel", clearTouchNav);
+    window.addEventListener("blur", clearTouchNav);
     var game = document.getElementById("game");
     if (game) {
       ["dragover", "drop"].forEach(function (ev) {
