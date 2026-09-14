@@ -182,7 +182,7 @@
   function playUrl(id) {
     current = id;
     stopLoop();
-    if (checkEl) { checkEl.textContent = ""; checkEl.className = "badge"; }
+    badge(null, "");
     markActive(id);
     status("loading " + id + ".sfc…");
     return fetch(bust("roms/" + id + ".sfc"))
@@ -206,7 +206,7 @@
   function playFile(file) {
     current = null;
     stopLoop();
-    if (checkEl) { checkEl.textContent = ""; checkEl.className = "badge"; }
+    badge(null, "");
     document.querySelectorAll("#picker button[data-rom]").forEach(function (b) {
       b.removeAttribute("aria-current");
     });
@@ -240,12 +240,86 @@
     }
   }
 
+  // The host page owns the badge element's base class and matches its CSS on
+  // `.<base>.<state>` — `rp-badge` in astro/SnesPlayer.astro and embed/snippet.html,
+  // plain `badge` in web/index.html. So the state is swapped with classList rather
+  // than assigned through .className, which would drop that base class and leave
+  // every `.rp-badge.pass` / `.badge.warn` rule unmatched.
+  function badgeState(cls) {
+    if (!checkEl) return;
+    checkEl.classList.remove("running", "pass", "fail", "warn");
+    if (cls) checkEl.classList.add(cls);
+  }
+
+  function badge(cls, text) {
+    if (!checkEl) return;
+    badgeState(cls);
+    checkEl.textContent = text;
+  }
+
+  // Poll the machine that is already running, instead of power-cycling: a demo whose "displayed"
+  // state is meaningful (e.g. the gallery's browsing cursor) would have that state destroyed by a
+  // reload before anything could be read. sc.record gives byte offsets from sc.off; sc.state
+  // reaches sc.ready only once every field describes the same, coherent verdict — the ROM's
+  // publication barrier (see "What the ROM publishes" / "The player / manifest contract" in
+  // docs/plans/2026-07-28-gallery-per-image-selfcheck.md, llvm-mos-65816). Deliberately does NOT
+  // stopLoop(): the live rAF loop keeps applying the visitor's keyboard/touch input every frame
+  // (see frame()), which is what lets navigation during the check be observed at all (step 5).
+  function verifyLiveRecord(sc) {
+    var rec = sc.record, poll = sc.poll || 120, total = sc.frames, done = 0;
+    var target = null, retargets = 0;
+    badge("running", "verifying…");
+    (function chunk() {
+      for (var i = 0; i < poll; i++) Module._bjg_run();
+      done += poll;
+      present();
+      var wram = Module._bjg_wram() >>> 0, u8 = Module.HEAPU8, base = wram + Number(sc.off);
+      var state = u8[base + rec.state];
+      var work = state ? u8[base + rec.work] : null;   // ignore every field while state==0
+      var name = (sc.titles && work != null) ? sc.titles[work] : (work != null ? "work " + work : null);
+      if (work != null && target != null && work !== target) {
+        // the visitor navigated mid-check
+        if (++retargets > 1) {
+          badge("fail", "navigation kept restarting the check — hold on one artwork and try again");
+          return;
+        }
+        target = work; done = 0;
+        badge("running", "following your navigation to " + name);
+        setTimeout(chunk, 0);
+        return;
+      }
+      if (work != null && target == null) target = work;
+      if (state !== sc.ready) {
+        if (done >= total) {
+          badge("warn", "⏱ still verifying " + (name || "…") + " — not finished within " + total + " frames");
+          return;
+        }
+        badge("running", name ? ("verifying " + name + "… " + done + "/" + total) : "verifying… " + done + "/" + total);
+        setTimeout(chunk, 0);
+        return;
+      }
+      var z = u8[base + rec.z[0]] | (u8[base + rec.z[0] + 1] << 8);
+      var ok = u8[base + rec.ok];
+      var want = sc.oracle[work];
+      if (ok === 1 && z === want) {
+        badge("pass", "✓ FIDELITY " + name + " — repacked on-SNES to " + z + " B == host oracle");
+      } else if (ok !== 1) {
+        badge("fail", "✗ FAILED " + name + " — the ROM's own byte-compare rejected its repack");
+      } else {
+        badge("fail", "✗ MISMATCH " + name + " got " + z + " want " + want);
+      }
+      // no startLoop(): the live loop was never stopped, so it is already resuming on its own —
+      // the visitor's browsing position was never touched by this check.
+    })();
+  }
+
   // Power on, run `frames` frames, then read WRAM and compare — exactly what the
   // gate's jgxcheck does. Runs in chunks so the tab stays responsive.
   function verify() {
     var meta = romMeta(current);
     if (!meta || !meta.selfcheck) return;
     var sc = meta.selfcheck;
+    if (sc.mode === "live-record") { verifyLiveRecord(sc); return; }
     var off = Number(sc.off), len = sc.len, want = Number(sc.want), total = sc.frames;
 
     stopLoop();
@@ -254,13 +328,13 @@
       .then(function (r) { return r.arrayBuffer(); })
       .then(function (buf) {
         loadRomBytes(new Uint8Array(buf));
-        checkEl.className = "badge running";
+        badgeState("running");
         var done = 0;
         function chunk() {
           var n = Math.min(120, total - done);
           for (var i = 0; i < n; i++) Module._bjg_run();
           done += n;
-          checkEl.textContent = "verifying… " + done + "/" + total + " frames";
+          badge("running", "verifying… " + done + "/" + total + " frames");
           present();
           if (done < total) { setTimeout(chunk, 0); return; }
           // read `len` little-endian bytes of WRAM at `off`
@@ -272,11 +346,9 @@
           var hexGot = "0x" + got.toString(16).toUpperCase();
           var hexWant = "0x" + (want >>> 0).toString(16).toUpperCase();
           if (got === want) {
-            checkEl.className = "badge pass";
-            checkEl.textContent = "✓ FIDELITY " + hexGot + " == gate (" + sc.label + ", " + total + " frames)";
+            badge("pass", "✓ FIDELITY " + hexGot + " == gate (" + sc.label + ", " + total + " frames)");
           } else {
-            checkEl.className = "badge fail";
-            checkEl.textContent = "✗ MISMATCH got " + hexGot + " want " + hexWant;
+            badge("fail", "✗ MISMATCH got " + hexGot + " want " + hexWant);
           }
           // resume the live demo from the verified state (frame `total`, image
           // already on screen) rather than a fresh black power-on.

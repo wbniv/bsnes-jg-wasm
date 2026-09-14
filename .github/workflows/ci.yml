@@ -45,7 +45,7 @@ jobs:
       - name: "Fidelity gate: rebuilt AND committed cores land the gate WRAM CRC"
         run: |
           set -euo pipefail
-          check() { # $1 = dir to serve (needs index.html/app.js/cores/roms)
+          check() { # $1 = dir to serve (needs index.html/app.js/cores/roms), $2 = badge base class
             python3 -m http.server 8000 --directory "$1" >/dev/null 2>&1 &
             SRV=$!
             sleep 1
@@ -54,15 +54,28 @@ jobs:
               "http://localhost:8000/?rom=mandel-display&verify=1" 2>/dev/null)
             kill $SRV
             echo "$DOM" | grep -o 'id="checkresult"[^<]*<\?[^<]*' | head -1
-            echo "$DOM" | grep -q 'badge pass' || { echo "fidelity self-check did not PASS for $1"; exit 1; }
+            # Assert the BASE class and the state class together. The host page owns the base class
+            # and its CSS matches `.<base>.pass`, so a player that writes the state through
+            # .className drops the base and silently unstyles every badge on every consuming site.
+            echo "$DOM" | grep -q "id=\"checkresult\" class=\"$2 pass\"" \
+              || { echo "expected id=\"checkresult\" class=\"$2 pass\" in $1"; exit 1; }
           }
           # 1. the freshly rebuilt core (web/ as-is)
-          check web
+          check web badge
           # 2. the committed dist engine, staged into the same harness
           rm -rf /tmp/dist-harness && cp -r web /tmp/dist-harness
           cp dist/engine/app.js /tmp/dist-harness/app.js
           cp dist/engine/cores/* /tmp/dist-harness/cores/
-          check /tmp/dist-harness
+          check /tmp/dist-harness badge
+          # 3. the same engine on a page whose badge carries a DIFFERENT base class — what
+          #    astro/SnesPlayer.astro and embed/snippet.html ship, and the only shape that can
+          #    catch the base class being clobbered (cases 1-2 cannot: their base is "badge",
+          #    which is exactly what a hardcoded className would have written anyway).
+          rm -rf /tmp/rp-harness && cp -r /tmp/dist-harness /tmp/rp-harness
+          sed -i 's/id="checkresult" class="badge"/id="checkresult" class="rp-badge"/' /tmp/rp-harness/index.html
+          grep -q 'id="checkresult" class="rp-badge"' /tmp/rp-harness/index.html \
+            || { echo "harness rewrite missed the badge span — check web/index.html markup"; exit 1; }
+          check /tmp/rp-harness rp-badge
 
       - name: "Sync CLI smoke: sync --demo, then --check, then tamper must fail"
         run: |

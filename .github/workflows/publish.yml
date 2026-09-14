@@ -43,7 +43,7 @@ jobs:
           google-chrome --headless=new --disable-gpu --no-sandbox \
             --virtual-time-budget=120000 --dump-dom \
             "http://localhost:8000/?rom=mandel-display&verify=1" 2>/dev/null \
-            | grep -q 'badge pass'
+            | grep -q 'id="checkresult" class="badge pass"'   # base class AND state, together
 
       - name: "Tag == package.json version"
         run: |

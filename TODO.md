@@ -25,9 +25,15 @@ Plan / contract: [docs/plans/2026-06-25-bsnes-jg-wasm.md](docs/plans/2026-06-25-
 
 ### live-record mode — [spec](../llvm-mos-65816/docs/plans/2026-07-28-gallery-per-image-selfcheck.md)
 
-- [T1] **Release + resync** (user-gated, not yet authorized): version bump, `npm publish`, then
-  `npx bsnes-jg-player sync` on biohack.net + indri.studio so their manifests can switch the
-  gallery's selfcheck to `mode: "live-record"` (currently pinned to the legacy work-0 fallback).
+- [T1] **Release + resync** — **PREPARED 2026-09-15, publication still user-gated.** `1.1.0` is
+  committed on `npm-package` (**unpushed**) with `live-record` staged into `dist/`, the badge
+  base-class fix, and `.rp-badge.warn` in `embed/player.css`; both sites are synced and committed
+  locally (also unpushed). What remains needs the user's go-ahead and is outward-facing:
+  `git push origin npm-package`, then on each site `pnpm update @wbniv/bsnes-jg-player` (the dep is
+  `github:wbniv/bsnes-jg-wasm#npm-package`, so the branch push *is* the release — `npm publish` is
+  only needed for registry consumers), then flip the gallery's selfcheck to `mode: "live-record"`
+  and deploy. Until the branch is pushed, both sites' CI `sync --check` sees 1.1.0 on disk against
+  1.0.0 in `node_modules` and fails — that is the gate working, not a defect.
 - [T2] **Re-verify the retarget-once "stop" case** (2nd navigation mid-poll → fail badge) in a less
   resource-contended browser session — reproduced only the 1st retarget live (work 0→1, counter
   reset, correct title); the 2nd attempt kept losing its headless Chrome target to what looked like
@@ -54,6 +60,10 @@ _Nothing parked._
 
 ## Done
 
+- [x] 2026-09-15 — [live-record] badge state is swapped with `classList`, so the host page's base
+  class (`rp-badge` / `badge`) survives every transition and its CSS finally applies; `.rp-badge.warn`
+  added to `embed/player.css`; `stage-dist.sh` filters the demo manifest to the ROMs it bundles.
+  Headless Playwright: 4/4 states assert both classes and the computed pill colour.
 - [x] 2026-07-31 — [live-record] `mode: "live-record"` implemented in `verify()` (no power-cycle,
   polls the running machine); browser-verified pass/mismatch/warn + 1st-of-2 retarget. See TODO Open.
 - [x] 2026-07-27 — [npm-package] Phase C: indri adopts the package (kept own embed markup, deliberate); snes-rom-page skill v2 (no vendored engine).

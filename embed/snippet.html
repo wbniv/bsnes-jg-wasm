@@ -15,8 +15,13 @@
      Keyboard map (fixed): arrows = D-pad, Z/X = B/A, A/S = Y/X, Q/W = L/R,
        Enter = Start, Shift = Select.
      Manifest extras per ROM: "selfcheck" {off,len,want,frames,label} powers the
-       Verify button; "touchNav" {left:[x,y,w,h], right:[x,y,w,h]} maps canvas taps
-       to pad Left/Right (for ROMs that draw their own chevrons). -->
+       Verify button; "selfcheck.mode":"live-record" instead polls the running
+       machine's record at off until state==ready, then asserts ok==1 &&
+       z==oracle[work]; "touchNav" {left:[x,y,w,h], right:[x,y,w,h]} maps canvas
+       taps to pad Left/Right (for ROMs that draw their own chevrons).
+     #checkresult keeps the base class you give it and gains exactly one of
+       running/pass/fail/warn, so style .rp-badge.pass etc. `warn` means the frame
+       budget ran out with no verdict published — indeterminate, not a failure. -->
 <link rel="stylesheet" href="player.css">
 
 <section id="bjg-embed" class="rp-player" aria-label="Live SNES emulator">

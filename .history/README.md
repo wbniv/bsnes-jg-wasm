@@ -1,9 +1,15 @@
 | Date | Change |
 |------|--------|
+| [2026-07-27](https://github.com/wbniv/bsnes-jg-wasm/commit/4d52482) | package: SnesPlayer.astro + integration warning light + framework-agnostic embed |
 | [2026-06-25](https://github.com/wbniv/bsnes-jg-wasm/commit/66bc05d) | Wire accurate mode: the gate's bsnes-jg 2.1.0 core, in the browser |
 | [2026-06-25](https://github.com/wbniv/bsnes-jg-wasm/commit/0c1dc94) | scaffold bsnes-jg-wasm: the gate's cycle-accurate SNES core, in the browser |
 
 <!--history-meta v1
+4d52482	author	Will Norris
+4d52482	added	55
+4d52482	deleted	0
+4d52482	files	1
+4d52482	body	- astro/SnesPlayer.astro: renders the #bjg-embed block, computes the BJG_BUST\n  map at build time, emits the boot script; props slug/title/keys/playBase/\n  fullscreen/class + a slot for extra lines. Imports embed/player.css.\n- astro/integration.mjs: optional astro:config:setup check of the\n  ENGINE_VERSION stamp vs the installed package (warn or error).\n- embed/snippet.html + player.css: documented plain-HTML embed with the full\n  boot contract (globals, element ids, keymap, manifest selfcheck/touchNav).\n- README: npm usage, sync/--check flow, boot contract table.\n  npm pack --dry-run: 17 files, 1.9 MB tarball.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_011DEG8ouwAWtqeWtcvZSysz
 66bc05d	author	Will Norris
 66bc05d	added	35
 66bc05d	deleted	29

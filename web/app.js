@@ -182,7 +182,7 @@
   function playUrl(id) {
     current = id;
     stopLoop();
-    if (checkEl) { checkEl.textContent = ""; checkEl.className = "badge"; }
+    badge(null, "");
     markActive(id);
     status("loading " + id + ".sfc…");
     return fetch(bust("roms/" + id + ".sfc"))
@@ -206,7 +206,7 @@
   function playFile(file) {
     current = null;
     stopLoop();
-    if (checkEl) { checkEl.textContent = ""; checkEl.className = "badge"; }
+    badge(null, "");
     document.querySelectorAll("#picker button[data-rom]").forEach(function (b) {
       b.removeAttribute("aria-current");
     });
@@ -240,8 +240,20 @@
     }
   }
 
+  // The host page owns the badge element's base class and matches its CSS on
+  // `.<base>.<state>` — `rp-badge` in astro/SnesPlayer.astro and embed/snippet.html,
+  // plain `badge` in web/index.html. So the state is swapped with classList rather
+  // than assigned through .className, which would drop that base class and leave
+  // every `.rp-badge.pass` / `.badge.warn` rule unmatched.
+  function badgeState(cls) {
+    if (!checkEl) return;
+    checkEl.classList.remove("running", "pass", "fail", "warn");
+    if (cls) checkEl.classList.add(cls);
+  }
+
   function badge(cls, text) {
-    checkEl.className = "badge " + cls;
+    if (!checkEl) return;
+    badgeState(cls);
     checkEl.textContent = text;
   }
 
@@ -316,13 +328,13 @@
       .then(function (r) { return r.arrayBuffer(); })
       .then(function (buf) {
         loadRomBytes(new Uint8Array(buf));
-        checkEl.className = "badge running";
+        badgeState("running");
         var done = 0;
         function chunk() {
           var n = Math.min(120, total - done);
           for (var i = 0; i < n; i++) Module._bjg_run();
           done += n;
-          checkEl.textContent = "verifying… " + done + "/" + total + " frames";
+          badge("running", "verifying… " + done + "/" + total + " frames");
           present();
           if (done < total) { setTimeout(chunk, 0); return; }
           // read `len` little-endian bytes of WRAM at `off`
@@ -334,11 +346,9 @@
           var hexGot = "0x" + got.toString(16).toUpperCase();
           var hexWant = "0x" + (want >>> 0).toString(16).toUpperCase();
           if (got === want) {
-            checkEl.className = "badge pass";
-            checkEl.textContent = "✓ FIDELITY " + hexGot + " == gate (" + sc.label + ", " + total + " frames)";
+            badge("pass", "✓ FIDELITY " + hexGot + " == gate (" + sc.label + ", " + total + " frames)");
           } else {
-            checkEl.className = "badge fail";
-            checkEl.textContent = "✗ MISMATCH got " + hexGot + " want " + hexWant;
+            badge("fail", "✗ MISMATCH got " + hexGot + " want " + hexWant);
           }
           // resume the live demo from the verified state (frame `total`, image
           // already on screen) rather than a fresh black power-on.

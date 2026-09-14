@@ -64,6 +64,8 @@ export default defineConfig({ integrations: [bsnesPlayer()] });
 | `#screen` | the 256×224 canvas (required) |
 | `#status` `#checkresult` `#verify` `#banner` `#fullscreen` `#game` | status line · fidelity badge · self-check button · errors/provenance · fullscreen button · drag-drop wrapper (all optional) |
 | manifest `selfcheck` | `{off,len,want,frames,label}` — powers **Verify fidelity** (run N frames, assert WRAM) |
+| manifest `selfcheck.mode: "live-record"` | `{off,record,ready,oracle,titles,frames,poll,label}` — polls the **running** machine (no power-cycle) until `record.state == ready`, then asserts `ok == 1 && z == oracle[work]`. For ROMs whose on-screen state is the thing being checked |
+| `#checkresult` classes | the player adds exactly one of `running` `pass` `fail` `warn` and **keeps whatever base class your markup gave the element** — style `.rp-badge.pass` etc. `warn` is indeterminate (frame budget spent, no verdict published), never a failure |
 | manifest `touchNav` | `{left:[x,y,w,h], right:[x,y,w,h]}` — canvas taps press pad Left/Right (for ROMs drawing their own chevrons) |
 
 Keyboard map (fixed): arrows = D-pad, `Z`/`X` = B/A, `A`/`S` = Y/X, `Q`/`W` = L/R, `Enter` = Start,
